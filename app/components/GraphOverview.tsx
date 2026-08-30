@@ -21,7 +21,6 @@ export const GraphOverview: React.FC<GraphOverviewProps> = ({
   useEffect(() => {
     if (!containerRef.current || !graphComponent) return;
 
-    // Create overview component
     const overview = new GraphOverviewComponent();
     overview.graphComponent = graphComponent;
     overview.htmlElement.style.width = '100%';
@@ -58,7 +57,7 @@ export const GraphOverview: React.FC<GraphOverviewProps> = ({
 
   return (
     <div className="absolute bottom-6 left-6 z-20 w-64 h-44 bg-zinc-900/95 border border-zinc-700/80 rounded-xl shadow-2xl backdrop-blur-md overflow-hidden flex flex-col transition-all">
-      {/* Minimap Header */}
+      {}
       <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-800/80 border-b border-zinc-700/60 text-xs font-medium text-zinc-300 select-none">
         <div className="flex items-center gap-1.5 text-zinc-200">
           <MapPin className="w-3.5 h-3.5 text-indigo-400" />
@@ -82,7 +81,7 @@ export const GraphOverview: React.FC<GraphOverviewProps> = ({
         </div>
       </div>
 
-      {/* Minimap Viewport Canvas */}
+      {}
       <div ref={containerRef} className="flex-1 w-full h-full bg-zinc-950/80 relative" />
     </div>
   );

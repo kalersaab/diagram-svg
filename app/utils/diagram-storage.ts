@@ -1,10 +1,3 @@
-/**
- * Diagram storage helpers.
- *
- * localStorage functions are kept for offline / guest use and as an optimistic
- * cache.  The API-backed helpers in diagrams-api.ts are the source of truth when
- * the user is authenticated.
- */
 
 export interface StoredDiagram {
   id: string;
@@ -250,9 +243,54 @@ export function setActiveDiagramId(id: string) {
   localStorage.setItem(ACTIVE_ID_KEY, id);
 }
 
-/**
- * File Download helpers
- */
+export async function syncLocalDiagramsToBackend(
+  remoteDiagrams: StoredDiagram[],
+  createFn: (payload: {
+    title: string;
+    description: string;
+    category: StoredDiagram['category'];
+    xml: string;
+    svg?: string;
+  }) => Promise<StoredDiagram>,
+): Promise<StoredDiagram[]> {
+  if (typeof window === 'undefined') return remoteDiagrams;
+
+  const local = getStoredDiagrams();
+
+  const SAMPLE_IDS = new Set(SAMPLE_DRAWIO_DIAGRAMS.map((d) => d.id));
+
+  const remoteTitles = new Set(remoteDiagrams.map((d) => d.title.trim().toLowerCase()));
+
+  const toUpload = local.filter(
+    (d) => !SAMPLE_IDS.has(d.id) && !remoteTitles.has(d.title.trim().toLowerCase()),
+  );
+
+  if (toUpload.length === 0) {
+
+    localStorage.removeItem(STORAGE_KEY);
+    return remoteDiagrams;
+  }
+
+  const uploaded: StoredDiagram[] = [];
+  for (const d of toUpload) {
+    try {
+      const saved = await createFn({
+        title: d.title,
+        description: d.description,
+        category: d.category,
+        xml: d.xml,
+        svg: d.svg,
+      });
+      uploaded.push(saved);
+    } catch (err) {
+      console.warn(`Failed to sync local diagram "${d.title}" to backend:`, err);
+    }
+  }
+
+  localStorage.removeItem(STORAGE_KEY);
+
+  return [...uploaded, ...remoteDiagrams];
+}
 export function downloadFile(content: string, fileName: string, contentType: string) {
   const blob = new Blob([content], { type: contentType });
   const url = URL.createObjectURL(blob);

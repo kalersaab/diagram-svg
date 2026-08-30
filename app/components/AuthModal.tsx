@@ -9,7 +9,7 @@ type ModalMode = 'login' | 'signup';
 interface AuthModalProps {
   onClose?: () => void;
   auth: UseAuthReturn;
-  /** If true the modal cannot be closed (initial auth wall) */
+  
   required?: boolean;
 }
 
@@ -19,8 +19,7 @@ export function AuthModal({ onClose, auth, required = false }: AuthModalProps) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Clear api error when switching modes or editing fields
-  useEffect(() => { auth.clearError(); }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { auth.clearError(); }, [mode]); 
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -35,7 +34,7 @@ export function AuthModal({ onClose, auth, required = false }: AuthModalProps) {
         }
         onClose?.();
       } catch {
-        // error is already set in useAuth
+
       } finally {
         setLoading(false);
       }
@@ -44,7 +43,7 @@ export function AuthModal({ onClose, auth, required = false }: AuthModalProps) {
   );
 
   return (
-    /* Backdrop */
+    
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
       <div
         className="relative w-full max-w-sm mx-4 rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/60"
@@ -52,7 +51,7 @@ export function AuthModal({ onClose, auth, required = false }: AuthModalProps) {
         aria-modal="true"
         aria-label={mode === 'login' ? 'Sign in' : 'Create account'}
       >
-        {/* Close button – only when not required */}
+        {}
         {!required && onClose && (
           <button
             onClick={onClose}
@@ -64,7 +63,7 @@ export function AuthModal({ onClose, auth, required = false }: AuthModalProps) {
         )}
 
         <div className="p-7 space-y-6">
-          {/* Header */}
+          {}
           <div className="flex flex-col items-center gap-3 text-center">
             <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
               <Sparkles className="w-5 h-5 text-white" />
@@ -81,9 +80,9 @@ export function AuthModal({ onClose, auth, required = false }: AuthModalProps) {
             </div>
           </div>
 
-          {/* Form */}
+          {}
           <form onSubmit={handleSubmit} className="space-y-3" noValidate>
-            {/* Email */}
+            {}
             <div className="space-y-1.5">
               <label htmlFor="auth-email" className="text-xs font-medium text-zinc-400">
                 Email
@@ -103,7 +102,7 @@ export function AuthModal({ onClose, auth, required = false }: AuthModalProps) {
               </div>
             </div>
 
-            {/* Password */}
+            {}
             <div className="space-y-1.5">
               <label htmlFor="auth-password" className="text-xs font-medium text-zinc-400">
                 Password
@@ -124,7 +123,7 @@ export function AuthModal({ onClose, auth, required = false }: AuthModalProps) {
               </div>
             </div>
 
-            {/* API Error */}
+            {}
             {auth.error && (
               <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -132,7 +131,7 @@ export function AuthModal({ onClose, auth, required = false }: AuthModalProps) {
               </div>
             )}
 
-            {/* Submit */}
+            {}
             <button
               type="submit"
               disabled={loading || !email || !password}
@@ -143,7 +142,7 @@ export function AuthModal({ onClose, auth, required = false }: AuthModalProps) {
             </button>
           </form>
 
-          {/* Toggle mode */}
+          {}
           <p className="text-center text-xs text-zinc-500">
             {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}{' '}
             <button

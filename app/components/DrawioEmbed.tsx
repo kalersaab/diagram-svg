@@ -44,16 +44,21 @@ export function DrawioEmbed({
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
   const [iframeKey, setIframeKey] = useState<number>(0);
 
-  // XML and SVG references for asynchronous event correlation
   const currentXmlRef = useRef<string>(sanitizeDiagramXml(initialXml));
   const pendingSaveResolveRef = useRef<((svg: string) => void) | null>(null);
 
-  // Construct Draw.io URL with embedding parameters
+  const initialXmlRef = useRef<string>(sanitizeDiagramXml(initialXml));
+  useEffect(() => {
+    const clean = sanitizeDiagramXml(initialXml);
+    console.log('clean', clean)
+    initialXmlRef.current = clean;
+    currentXmlRef.current = clean;
+  }, [initialXml]);
+
   const localUrl = `/drawio/index.html?embed=1&proto=json&spin=1&analytics=0&gapi=0&db=0&od=0&gh=0&tr=0&ui=min&libraries=1`;
   const cloudUrl = `https://embed.diagrams.net/?embed=1&proto=json&spin=1&analytics=0&gapi=0&db=0&od=0&gh=0&tr=0&ui=min&libraries=1`;
   const drawioSrc = useLocalSource ? localUrl : cloudUrl;
 
-  // Handle messages from the Draw.io iframe
   useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
       if (typeof e.data !== 'string') return;
@@ -66,21 +71,20 @@ export function DrawioEmbed({
           case 'init': {
             setIsReady(true);
             setStatus('ready');
-            // Load diagram into Draw.io
-            loadDiagramIntoDrawio(iframeRef.current, currentXmlRef.current, diagramTitle);
+
+            const xmlToLoad = initialXmlRef.current;
+            currentXmlRef.current = xmlToLoad;
+            loadDiagramIntoDrawio(iframeRef.current, xmlToLoad, diagramTitle);
             break;
           }
 
           case 'autosave':
           case 'save': {
             setStatus('saving');
-            // msg.xml is always the clean diagram XML (mxfile/mxGraphModel).
-            // Sanitize defensively in case older stored data sneaks in.
+
             const newXml = sanitizeDiagramXml(msg.xml || currentXmlRef.current);
             currentXmlRef.current = newXml;
 
-            // Request pure SVG export — msg.xml on the export event will carry
-            // the clean diagram XML, msg.data will carry the SVG data URL.
             if (autoExportSvg) {
               requestDrawioExport(iframeRef.current, 'svg');
             } else {
@@ -94,10 +98,9 @@ export function DrawioEmbed({
           case 'export': {
             const rawSvg = msg.data || '';
             const cleanSvg = decodeDrawioSvgData(rawSvg);
-            // msg.xml on the export event carries the current diagram XML.
-            // Sanitize it so we never store xmlsvg-contaminated content.
+
             const xml = sanitizeDiagramXml(msg.xml || currentXmlRef.current);
-            // Keep the ref in sync with the latest clean XML.
+
             currentXmlRef.current = xml;
 
             if (onSave) {
@@ -122,7 +125,7 @@ export function DrawioEmbed({
           }
         }
       } catch {
-        // Non-JSON message, ignore
+
       }
     };
 
@@ -132,7 +135,6 @@ export function DrawioEmbed({
     };
   }, [autoExportSvg, diagramTitle, onSave, onViewSvg]);
 
-  // When initialXml changes from outside, reload if ready
   useEffect(() => {
     if (initialXml && initialXml !== currentXmlRef.current) {
       const clean = sanitizeDiagramXml(initialXml);
@@ -143,14 +145,12 @@ export function DrawioEmbed({
     }
   }, [initialXml, isReady, diagramTitle]);
 
-  // Manually trigger Save & Export
   const handleManualSave = useCallback(() => {
     if (!iframeRef.current) return;
     setStatus('saving');
     requestDrawioExport(iframeRef.current, 'xmlsvg');
   }, []);
 
-  // Reload iframe
   const handleReload = useCallback(() => {
     setIsReady(false);
     setStatus('connecting');
@@ -159,7 +159,6 @@ export function DrawioEmbed({
 
   return (
     <div className={`flex flex-col h-full w-full bg-zinc-950 text-zinc-100 overflow-hidden ${className}`}>
-      {/* Top Embedded Control Bar */}
       <div className="h-12 border-b border-zinc-800/80 bg-zinc-900/90 px-4 flex items-center justify-between gap-3 shrink-0 backdrop-blur-md">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
@@ -169,7 +168,7 @@ export function DrawioEmbed({
 
           <div className="h-4 w-px bg-zinc-800" />
 
-          {/* Connection Status */}
+
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-800/80 text-[11px]">
             {status === 'connecting' && (
               <>
@@ -200,9 +199,9 @@ export function DrawioEmbed({
           </div>
         </div>
 
-        {/* Action Controls */}
+
         <div className="flex items-center gap-2">
-          {/* Toggle Local vs Cloud draw.io engine */}
+
           <button
             type="button"
             onClick={() => {
@@ -234,7 +233,7 @@ export function DrawioEmbed({
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
 
-          {/* Sync & Save Button */}
+
           <button
             type="button"
             onClick={handleManualSave}
@@ -244,7 +243,7 @@ export function DrawioEmbed({
             <span>Save &amp; Sync</span>
           </button>
 
-          {/* View in SVG Display Button */}
+
           {onViewSvg && (
             <button
               type="button"
@@ -258,7 +257,7 @@ export function DrawioEmbed({
         </div>
       </div>
 
-      {/* Main Draw.io iframe container */}
+
       <div className="flex-1 relative w-full h-full bg-zinc-900">
         <iframe
           key={iframeKey}

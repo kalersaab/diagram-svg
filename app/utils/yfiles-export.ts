@@ -14,9 +14,6 @@ export interface SvgExportOptions {
   inlineImages?: boolean;
 }
 
-/**
- * Exports the graph from GraphComponent into an SVG Element
- */
 export async function exportGraphToSvgElement(
   graphComponent: GraphComponent,
   options: SvgExportOptions = {}
@@ -29,7 +26,6 @@ export async function exportGraphToSvgElement(
     inlineImages = true
   } = options;
 
-  // Create temporary export component
   const exportComponent = new GraphComponent();
   exportComponent.graph = graphComponent.graph;
   exportComponent.updateContentBounds();
@@ -57,14 +53,10 @@ export async function exportGraphToSvgElement(
   }
 }
 
-/**
- * Serializes SVG Element to an XML string.
- */
 export function svgElementToString(svgElement: SVGElement): string {
   const serializer = new XMLSerializer();
   let svgString = serializer.serializeToString(svgElement);
 
-  // Ensure proper namespaces
   if (!svgString.includes('xmlns="http://www.w3.org/2000/svg"')) {
     svgString = svgString.replace(
       '<svg',
@@ -81,13 +73,9 @@ export function svgElementToString(svgElement: SVGElement): string {
     );
   }
 
-  // Prepend XML declaration
   return '<?xml version="1.0" encoding="utf-8"?>\n' + svgString;
 }
 
-/**
- * Triggers browser download of SVG string as a file.
- */
 export function downloadSvgString(svgString: string, filename = 'diagram.svg') {
   const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -100,9 +88,6 @@ export function downloadSvgString(svgString: string, filename = 'diagram.svg') {
   URL.revokeObjectURL(url);
 }
 
-/**
- * Renders SVG string to PNG data URL or triggers file download.
- */
 export async function downloadPngFromSvg(
   svgString: string,
   filename = 'diagram.png',

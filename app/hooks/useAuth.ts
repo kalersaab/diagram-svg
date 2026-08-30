@@ -22,10 +22,6 @@ const SESSION_KEY = 'diagram_user';
 const userService = new UserService();
 const diagramService = new DiagramService();
 
-/**
- * Probe the backend to verify the HttpOnly cookie is still valid.
- * We piggyback on GET /diagrams — a 200 means the session is live.
- */
 async function probeSession(): Promise<boolean> {
   try {
     await diagramService.getDiagrams();
@@ -40,7 +36,6 @@ export function useAuth(): UseAuthReturn {
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [error, setError] = useState<string | null>(null);
 
-  // On mount: restore cached user data and verify the session is still alive.
   useEffect(() => {
     const stored =
       typeof sessionStorage !== 'undefined'
@@ -64,7 +59,6 @@ export function useAuth(): UseAuthReturn {
     });
   }, []);
 
-  // Listen for 401 events dispatched by callApi and clear session automatically.
   useEffect(() => {
     const handleUnauthorized = () => {
       if (typeof sessionStorage !== 'undefined') {
@@ -104,7 +98,7 @@ export function useAuth(): UseAuthReturn {
     setError(null);
     try {
       await userService.signup({ body: { email, password } });
-      // Auto-login after successful signup
+
       const loginRes = await userService.login({ body: { email, password } });
       if (typeof sessionStorage !== 'undefined') {
         sessionStorage.setItem(SESSION_KEY, JSON.stringify(loginRes.data));
@@ -128,7 +122,7 @@ export function useAuth(): UseAuthReturn {
     try {
       await userService.logout();
     } catch {
-      // Ignore network errors — clear local state regardless
+
     }
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.removeItem(SESSION_KEY);

@@ -143,9 +143,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
   return (
     <header className="h-14 bg-zinc-900/95 border-b border-zinc-800/90 flex items-center justify-between px-4 z-30 select-none backdrop-blur-md">
-      {/* Left section: Logo, Sidebar toggle, Title */}
+      {}
       <div className="flex items-center gap-3">
-        {/* Toggle Left Palette */}
+        {}
         <button
           onClick={onToggleLeftSidebar}
           className={`p-1.5 rounded-lg border transition-colors ${
@@ -158,7 +158,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           <PanelLeft className="w-4 h-4" />
         </button>
 
-        {/* Project Branding */}
+        {}
         <div className="flex items-center gap-2.5 pr-3 border-r border-zinc-800">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md shadow-indigo-500/20">
             <Sparkles className="w-4 h-4 text-white" />
@@ -173,7 +173,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           </div>
         </div>
 
-        {/* Title Editor */}
+        {}
         <div className="flex items-center gap-1.5 max-w-[220px]">
           {isEditingTitle ? (
             <input
@@ -200,9 +200,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         </div>
       </div>
 
-      {/* Center Section: Templates, Layouts, Zoom & Canvas tools */}
+      {}
       <div className="flex items-center gap-2">
-        {/* Templates Dropdown */}
+        {}
         <div className="relative">
           <button
             onClick={() => {
@@ -247,7 +247,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           )}
         </div>
 
-        {/* Layout Automation Dropdown */}
+        {}
         <div className="relative">
           <button
             onClick={() => {
@@ -287,7 +287,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
         <div className="h-4 w-px bg-zinc-800 mx-1" />
 
-        {/* Undo / Redo */}
+        {}
         <div className="flex items-center bg-zinc-950/60 border border-zinc-800 rounded-lg p-0.5">
           <button
             onClick={handleUndo}
@@ -305,7 +305,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           </button>
         </div>
 
-        {/* Zoom Controls */}
+        {}
         <div className="flex items-center bg-zinc-950/60 border border-zinc-800 rounded-lg p-0.5">
           <button
             onClick={handleZoomIn}
@@ -337,7 +337,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           </button>
         </div>
 
-        {/* Toggles: Grid, Snap, Minimap */}
+        {}
         <div className="flex items-center bg-zinc-950/60 border border-zinc-800 rounded-lg p-0.5">
           <button
             onClick={onToggleGrid}
@@ -374,7 +374,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           </button>
         </div>
 
-        {/* Clear graph */}
+        {}
         <button
           onClick={onClearGraph}
           className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 border border-zinc-800 rounded-lg transition-colors"
@@ -384,9 +384,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         </button>
       </div>
 
-      {/* Right Section: Primary Export CTA + Inspector toggle */}
+      {}
       <div className="flex items-center gap-2">
-        {/* Open in draw.io Button */}
+        {}
         {onExportToDrawio && (
           <button
             onClick={onExportToDrawio}
@@ -398,7 +398,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           </button>
         )}
 
-        {/* Export SVG Button */}
+        {}
         <button
           onClick={onOpenExportModal}
           className="flex items-center gap-2 px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-lg text-xs font-semibold shadow-md shadow-indigo-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -407,7 +407,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           <span>Export SVG / Image</span>
         </button>
 
-        {/* Toggle Right Inspector */}
+        {}
         <button
           onClick={onToggleRightSidebar}
           className={`p-1.5 rounded-lg border transition-colors ${

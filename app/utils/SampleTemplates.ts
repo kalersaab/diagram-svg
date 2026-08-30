@@ -350,9 +350,6 @@ export const SAMPLE_TEMPLATES: TemplateDefinition[] = [
   }
 ];
 
-/**
- * Loads a template into the given graph and applies its recommended layout.
- */
 export function loadTemplateIntoGraph(graph: IGraph, template: TemplateDefinition) {
   graph.clear();
 

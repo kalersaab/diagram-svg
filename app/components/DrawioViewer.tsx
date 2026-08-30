@@ -41,7 +41,6 @@ export function DrawioViewer({
   const [copied, setCopied] = useState<boolean>(false);
   const [darkBg, setDarkBg] = useState<boolean>(true);
 
-  // Wheel zoom handler
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -67,7 +66,6 @@ export function DrawioViewer({
     setPan({ x: 0, y: 0 });
   };
 
-  // Pan handlers
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return;
     setIsPanning(true);
@@ -86,7 +84,6 @@ export function DrawioViewer({
     setIsPanning(false);
   }, []);
 
-  // Copy code
   const handleCopy = useCallback(async () => {
     const text = codeType === 'svg' ? svgContent : (diagramXml || '');
     await navigator.clipboard.writeText(text);
@@ -94,21 +91,18 @@ export function DrawioViewer({
     setTimeout(() => setCopied(false), 2000);
   }, [svgContent, diagramXml, codeType]);
 
-  // Export SVG
   const handleExportSvg = useCallback(() => {
     if (!svgContent) return;
     const filename = `${diagramTitle.replace(/\s+/g, '_').toLowerCase()}.svg`;
     downloadFile(svgContent, filename, 'image/svg+xml');
   }, [svgContent, diagramTitle]);
 
-  // Export PNG
   const handleExportPng = useCallback(() => {
     if (!svgContent) return;
     const filename = `${diagramTitle.replace(/\s+/g, '_').toLowerCase()}.png`;
     downloadSvgAsPng(svgContent, filename);
   }, [svgContent, diagramTitle]);
 
-  // Export .drawio XML
   const handleExportXml = useCallback(() => {
     if (!diagramXml) return;
     const filename = `${diagramTitle.replace(/\s+/g, '_').toLowerCase()}.drawio`;
@@ -119,9 +113,9 @@ export function DrawioViewer({
 
   return (
     <div className={`flex flex-col h-full w-full bg-zinc-950 text-zinc-100 overflow-hidden ${className}`}>
-      {/* Viewer Toolbar */}
+      {}
       <div className="h-12 border-b border-zinc-800/80 bg-zinc-900/90 px-4 flex items-center justify-between gap-3 shrink-0 backdrop-blur-md">
-        {/* Left: Zoom Controls */}
+        {}
         <div className="flex items-center gap-1.5">
           <button onClick={handleZoomOut} className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors" title="Zoom Out">
             <ZoomOut className="w-4 h-4" />
@@ -146,9 +140,9 @@ export function DrawioViewer({
           </div>
         </div>
 
-        {/* Right: Actions */}
+        {}
         <div className="flex items-center gap-1.5">
-          {/* Theme toggle */}
+          {}
           <button
             onClick={() => setDarkBg(!darkBg)}
             className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
@@ -157,7 +151,7 @@ export function DrawioViewer({
             {darkBg ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
 
-          {/* Code Toggle */}
+          {}
           <button
             onClick={() => setShowCode(!showCode)}
             className={`p-1.5 rounded-lg transition-colors ${showCode ? 'text-indigo-400 bg-indigo-500/10' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
@@ -168,7 +162,7 @@ export function DrawioViewer({
 
           <div className="h-4 w-px bg-zinc-800 mx-1" />
 
-          {/* Export Menu */}
+          {}
           <button onClick={handleExportSvg} className="flex items-center gap-1 px-2 py-1.5 text-xs rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors" title="Export SVG">
             <FileCode2 className="w-3.5 h-3.5" />
             <span>SVG</span>
@@ -186,9 +180,9 @@ export function DrawioViewer({
         </div>
       </div>
 
-      {/* Main content */}
+      {}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* SVG Viewer Pane */}
+        {}
         <div
           ref={containerRef}
           className={`flex-1 overflow-hidden cursor-grab active:cursor-grabbing relative transition-colors duration-300 ${darkBg ? 'bg-zinc-950' : 'bg-white'}`}
@@ -197,7 +191,7 @@ export function DrawioViewer({
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
         >
-          {/* Grid pattern overlay */}
+          {}
           <div
             className="absolute inset-0 pointer-events-none opacity-[0.03]"
             style={{
@@ -233,10 +227,10 @@ export function DrawioViewer({
           )}
         </div>
 
-        {/* Code Panel (slide in from right) */}
+        {}
         {showCode && (
           <div className="w-[420px] border-l border-zinc-800/80 bg-zinc-900/95 flex flex-col shrink-0 backdrop-blur-md">
-            {/* Code panel header */}
+            {}
             <div className="h-10 border-b border-zinc-800/60 px-3 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-1">
                 <button

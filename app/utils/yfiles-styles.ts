@@ -32,6 +32,10 @@ export interface DiagramNodeData {
   badge?: string;
   shape?: NodeShape;
   status?: 'online' | 'warning' | 'idle' | 'error';
+  
+  objectTypeId?: string;
+  
+  instanceAttributes?: Record<string, string | number | boolean>;
 }
 
 export interface DiagramEdgeData {
@@ -40,11 +44,12 @@ export interface DiagramEdgeData {
   dashed?: boolean;
   strokeWidth?: number;
   animated?: boolean;
+  
+  relationshipTypeId?: string;
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-// Built-in crisp SVG Icon paths
 const SVG_ICONS: Record<string, string> = {
   server:
     'M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6zm0 10a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2zm3-9h.01M7 17h.01M17 7h.01M17 17h.01',
@@ -87,9 +92,6 @@ interface CacheData {
   tag: DiagramNodeData;
 }
 
-/**
- * Premium Modern SVG Node Style
- */
 export class DiagramNodeStyle extends NodeStyleBase<TaggedSvgVisual<SVGGElement, CacheData>> {
   createVisual(context: IRenderContext, node: INode): TaggedSvgVisual<SVGGElement, CacheData> {
     const g = document.createElementNS(SVG_NS, 'g');
@@ -139,7 +141,7 @@ export class DiagramNodeStyle extends NodeStyleBase<TaggedSvgVisual<SVGGElement,
       cache.selected !== isSelected || JSON.stringify(cache.tag) !== JSON.stringify(tag);
 
     if (sizeChanged || stateChanged) {
-      // Clear and re-render
+
       while (oldVisual.svgElement.firstChild) {
         oldVisual.svgElement.removeChild(oldVisual.svgElement.firstChild);
       }
@@ -164,14 +166,11 @@ export class DiagramNodeStyle extends NodeStyleBase<TaggedSvgVisual<SVGGElement,
     const color = tag.color || '#6366f1';
     const shape = tag.shape || 'card';
 
-    // Unique gradient IDs
     const idSuffix = Math.random().toString(36).substring(2, 8);
     const gradId = `grad_${idSuffix}`;
 
-    // Defs for gradients & drop shadows
     const defs = document.createElementNS(SVG_NS, 'defs');
     
-    // Linear Gradient
     const grad = document.createElementNS(SVG_NS, 'linearGradient');
     grad.setAttribute('id', gradId);
     grad.setAttribute('x1', '0%');
@@ -194,7 +193,6 @@ export class DiagramNodeStyle extends NodeStyleBase<TaggedSvgVisual<SVGGElement,
     defs.appendChild(grad);
     g.appendChild(defs);
 
-    // Selection Halo Glow
     if (selected) {
       const halo = document.createElementNS(SVG_NS, 'rect');
       halo.setAttribute('x', '-5');
@@ -210,11 +208,9 @@ export class DiagramNodeStyle extends NodeStyleBase<TaggedSvgVisual<SVGGElement,
       g.appendChild(halo);
     }
 
-    // Main Shape Geometry
     const shapeElement = this.createShapeElement(shape, width, height, gradId, color);
     g.appendChild(shapeElement);
 
-    // Left accent bar for card shape
     if (shape === 'card' || shape === 'rounded') {
       const accent = document.createElementNS(SVG_NS, 'rect');
       accent.setAttribute('x', '0');
@@ -226,7 +222,6 @@ export class DiagramNodeStyle extends NodeStyleBase<TaggedSvgVisual<SVGGElement,
       g.appendChild(accent);
     }
 
-    // Icon Container
     const iconName = tag.icon || 'server';
     const iconPathD = SVG_ICONS[iconName] || SVG_ICONS.server;
 
@@ -259,11 +254,9 @@ export class DiagramNodeStyle extends NodeStyleBase<TaggedSvgVisual<SVGGElement,
     iconGroup.appendChild(iconPath);
     g.appendChild(iconGroup);
 
-    // Text Container (Title + Subtitle)
     const textGroup = document.createElementNS(SVG_NS, 'g');
     const textX = 48;
 
-    // Title
     const titleText = document.createElementNS(SVG_NS, 'text');
     titleText.setAttribute('x', `${textX}`);
     titleText.setAttribute(
@@ -277,7 +270,6 @@ export class DiagramNodeStyle extends NodeStyleBase<TaggedSvgVisual<SVGGElement,
     titleText.textContent = this.truncateText(tag.title, width - textX - (tag.badge ? 55 : 15));
     textGroup.appendChild(titleText);
 
-    // Subtitle
     if (tag.subtitle) {
       const subText = document.createElementNS(SVG_NS, 'text');
       subText.setAttribute('x', `${textX}`);
@@ -290,7 +282,6 @@ export class DiagramNodeStyle extends NodeStyleBase<TaggedSvgVisual<SVGGElement,
     }
     g.appendChild(textGroup);
 
-    // Status Indicator Dot or Badge
     if (tag.badge) {
       const badgeG = document.createElementNS(SVG_NS, 'g');
       const badgeWidth = Math.min(50, Math.max(34, tag.badge.length * 7 + 10));
@@ -401,7 +392,6 @@ export class DiagramNodeStyle extends NodeStyleBase<TaggedSvgVisual<SVGGElement,
       return polygon;
     }
 
-    // Default card / rounded rectangle
     const rect = document.createElementNS(SVG_NS, 'rect');
     rect.setAttribute('x', '0');
     rect.setAttribute('y', '0');
@@ -426,15 +416,11 @@ export class DiagramNodeStyle extends NodeStyleBase<TaggedSvgVisual<SVGGElement,
   }
 }
 
-/**
- * Configure default graph styles on a given IGraph instance
- */
 export function configureDiagramStyles(graph: IGraph) {
-  // Default node size & style
+
   graph.nodeDefaults.size = new Size(180, 58);
   graph.nodeDefaults.style = new DiagramNodeStyle();
 
-  // Default edge style (Polyline with smooth fillets and sleek arrows)
   graph.edgeDefaults.style = new PolylineEdgeStyle({
     smoothingLength: 20,
     stroke: '2.5px #6366f1',
@@ -446,7 +432,6 @@ export function configureDiagramStyles(graph: IGraph) {
     })
   });
 
-  // Edge label positioning
   graph.edgeDefaults.labels.layoutParameter = new EdgePathLabelModel({
     autoRotation: false,
     sideOfEdge: 'on-edge',
@@ -454,9 +439,6 @@ export function configureDiagramStyles(graph: IGraph) {
   }).createRatioParameter();
 }
 
-/**
- * Create a custom edge style based on edge data
- */
 export function createEdgeStyle(data?: DiagramEdgeData): PolylineEdgeStyle {
   const color = data?.color || '#6366f1';
   const strokeWidth = data?.strokeWidth || 2.5;

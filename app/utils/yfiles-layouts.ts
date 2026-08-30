@@ -25,9 +25,6 @@ export interface LayoutOptions {
   animate?: boolean;
 }
 
-/**
- * Creates the specified layout algorithm instance with tuned aesthetic parameters.
- */
 export function getLayoutAlgorithm(type: LayoutType): ILayoutAlgorithm {
   switch (type) {
     case 'hierarchical-tb': {
@@ -76,9 +73,6 @@ export function getLayoutAlgorithm(type: LayoutType): ILayoutAlgorithm {
   }
 }
 
-/**
- * Executes an animated layout on the GraphComponent.
- */
 export async function applyLayout(
   graphComponent: GraphComponent,
   type: LayoutType,

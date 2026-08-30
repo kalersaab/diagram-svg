@@ -67,7 +67,6 @@ export function DrawioGallery({
 
   const isAuthenticated = auth.status === 'authenticated';
 
-  /** Create a new blank diagram – persist to API if authenticated, else localStorage. */
   const handleCreateNew = useCallback(async () => {
     const newDiagram: StoredDiagram = {
       id: `diagram_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -93,7 +92,7 @@ export function DrawioGallery({
         onEditDiagram(saved);
       } catch (err) {
         console.error('Failed to create diagram via API', err);
-        // Fall back to localStorage
+
         const updated = saveDiagramToStorage(newDiagram);
         onDiagramsChange(updated);
         onEditDiagram(newDiagram);
@@ -107,7 +106,6 @@ export function DrawioGallery({
     }
   }, [isAuthenticated, diagrams, onDiagramsChange, onEditDiagram]);
 
-  /** Delete a diagram. */
   const handleDelete = useCallback(
     async (e: React.MouseEvent, id: string) => {
       e.stopPropagation();
@@ -127,7 +125,6 @@ export function DrawioGallery({
     [isAuthenticated, diagrams, onDiagramsChange],
   );
 
-  /** Import a .drawio / .xml file. */
   const handleImport = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -178,7 +175,6 @@ export function DrawioGallery({
     [isAuthenticated, diagrams, onDiagramsChange, onEditDiagram],
   );
 
-  // Filter diagrams
   const filteredDiagrams = diagrams.filter(d => {
     const matchesSearch =
       !searchQuery ||
@@ -192,7 +188,7 @@ export function DrawioGallery({
 
   return (
     <div className={`flex flex-col h-full bg-zinc-950 text-zinc-100 overflow-hidden ${className}`}>
-      {/* Header */}
+      {}
       <div className="px-6 pt-6 pb-4 space-y-4 shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -209,7 +205,7 @@ export function DrawioGallery({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Auth status pill */}
+            {}
             {isAuthenticated ? (
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-medium">
@@ -260,7 +256,7 @@ export function DrawioGallery({
           </div>
         </div>
 
-        {/* Search and Filter */}
+        {}
         <div className="flex items-center gap-3">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
@@ -281,7 +277,7 @@ export function DrawioGallery({
             )}
           </div>
 
-          {/* Category Filters */}
+          {}
           <div className="flex items-center gap-1.5">
             {categories.map(cat => {
               const meta = cat === 'all' ? null : CATEGORY_META[cat];
@@ -303,7 +299,7 @@ export function DrawioGallery({
         </div>
       </div>
 
-      {/* Diagram Grid */}
+      {}
       <div className="flex-1 overflow-y-auto px-6 pb-6">
         {filteredDiagrams.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 gap-4 text-zinc-500">
@@ -322,7 +318,7 @@ export function DrawioGallery({
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
-            {/* Create New Card */}
+            {}
             <button
               onClick={handleCreateNew}
               disabled={saving}
@@ -339,7 +335,7 @@ export function DrawioGallery({
               </span>
             </button>
 
-            {/* Diagram Cards */}
+            {}
             {filteredDiagrams.map(diagram => {
               const cat = CATEGORY_META[diagram.category] || CATEGORY_META.custom;
               return (
@@ -348,7 +344,7 @@ export function DrawioGallery({
                   className="group relative h-56 rounded-2xl border border-zinc-800/80 bg-zinc-900/50 hover:bg-zinc-900/80 hover:border-zinc-700 overflow-hidden transition-all duration-300 cursor-pointer"
                   onClick={() => onViewDiagram(diagram)}
                 >
-                  {/* SVG Preview */}
+                  {}
                   <div className="h-32 bg-zinc-950/50 border-b border-zinc-800/50 flex items-center justify-center overflow-hidden p-4">
                     {diagram.svg ? (
                       <div
@@ -363,7 +359,7 @@ export function DrawioGallery({
                     )}
                   </div>
 
-                  {/* Card Info */}
+                  {}
                   <div className="p-3 space-y-2">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="text-sm font-semibold text-zinc-200 truncate leading-tight flex-1">
@@ -378,14 +374,14 @@ export function DrawioGallery({
                         <Clock className="w-3 h-3" />
                         {new Date(diagram.updatedAt).toLocaleDateString()}
                       </span>
-                      {/* Sync indicator */}
+                      {}
                       {isAuthenticated && (
                         <span className="text-[10px] text-emerald-600">● synced</span>
                       )}
                     </div>
                   </div>
 
-                  {/* Hover Actions */}
+                  {}
                   <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={e => { e.stopPropagation(); onEditDiagram(diagram); }}

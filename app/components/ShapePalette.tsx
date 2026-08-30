@@ -35,7 +35,7 @@ interface PaletteItem {
 }
 
 const PALETTE_ITEMS: PaletteItem[] = [
-  // Cloud & Microservices
+
   {
     id: 'api-gateway',
     name: 'API Gateway',
@@ -142,7 +142,6 @@ const PALETTE_ITEMS: PaletteItem[] = [
     lucideIcon: <Users className="w-4 h-4 text-sky-400" />
   },
 
-  // Flowchart & Decision
   {
     id: 'flow-start',
     name: 'Start / Terminal',
@@ -227,7 +226,7 @@ export const ShapePalette: React.FC<ShapePaletteProps> = ({ onAddNode }) => {
 
   return (
     <aside className="w-64 h-full bg-zinc-900/90 border-r border-zinc-800/80 flex flex-col backdrop-blur-xl select-none z-10">
-      {/* Header */}
+      {}
       <div className="p-3.5 border-b border-zinc-800/80">
         <div className="flex items-center justify-between mb-2.5">
           <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
@@ -238,7 +237,7 @@ export const ShapePalette: React.FC<ShapePaletteProps> = ({ onAddNode }) => {
           </span>
         </div>
 
-        {/* Search */}
+        {}
         <div className="relative">
           <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
           <input
@@ -250,7 +249,7 @@ export const ShapePalette: React.FC<ShapePaletteProps> = ({ onAddNode }) => {
           />
         </div>
 
-        {/* Filter Pills */}
+        {}
         <div className="flex items-center gap-1 mt-2.5">
           {(['all', 'cloud', 'flowchart'] as const).map((tab) => (
             <button
@@ -268,7 +267,7 @@ export const ShapePalette: React.FC<ShapePaletteProps> = ({ onAddNode }) => {
         </div>
       </div>
 
-      {/* Item List */}
+      {}
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {filteredItems.map((item) => (
           <div
@@ -324,7 +323,7 @@ export const ShapePalette: React.FC<ShapePaletteProps> = ({ onAddNode }) => {
         )}
       </div>
 
-      {/* Footer Info */}
+      {}
       <div className="p-3 border-t border-zinc-800/80 bg-zinc-950/30 text-[11px] text-zinc-500 text-center">
         Tip: Drag onto canvas or double click anywhere to add a node.
       </div>

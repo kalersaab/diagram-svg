@@ -84,7 +84,6 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   const targetNode = isNode ? (state.item as INode) : null;
   const targetEdge = isEdge ? (state.item as IEdge) : null;
 
-  // Actions
   const handleDelete = () => {
     if (state.item) {
       graphComponent.graph.remove(state.item);
@@ -177,7 +176,7 @@ function setEdgeColor(gc: GraphComponent, target: IEdge, hex: string) {
       style={{ top: `${state.y}px`, left: `${state.x}px` }}
       className="fixed z-50 min-w-[200px] bg-zinc-900/95 border border-zinc-700/80 rounded-xl shadow-2xl backdrop-blur-xl p-1.5 text-xs text-zinc-300 animate-in fade-in zoom-in-95 duration-100 select-none"
     >
-      {/* Node Actions */}
+      {}
       {targetNode && (
         <>
           <div className="px-2 py-1 text-[10px] font-semibold tracking-wider text-zinc-500 uppercase">
@@ -201,7 +200,7 @@ function setEdgeColor(gc: GraphComponent, target: IEdge, hex: string) {
             <span>Duplicate Node</span>
           </button>
 
-          {/* Quick Color Swatches */}
+          {}
           <div className="px-2.5 py-1.5 border-t border-zinc-800 my-1">
             <div className="flex items-center gap-1.5 mb-1.5 text-[11px] text-zinc-400">
               <Palette className="w-3 h-3" />
@@ -231,7 +230,7 @@ function setEdgeColor(gc: GraphComponent, target: IEdge, hex: string) {
         </>
       )}
 
-      {/* Edge Actions */}
+      {}
       {targetEdge && (
         <>
           <div className="px-2 py-1 text-[10px] font-semibold tracking-wider text-zinc-500 uppercase">
@@ -255,7 +254,7 @@ function setEdgeColor(gc: GraphComponent, target: IEdge, hex: string) {
             <span>Reverse Direction</span>
           </button>
 
-          {/* Quick Color Swatches */}
+          {}
           <div className="px-2.5 py-1.5 border-t border-zinc-800 my-1">
             <div className="flex items-center gap-1.5 mb-1.5 text-[11px] text-zinc-400">
               <Palette className="w-3 h-3" />
@@ -285,7 +284,7 @@ function setEdgeColor(gc: GraphComponent, target: IEdge, hex: string) {
         </>
       )}
 
-      {/* Canvas Blank Actions */}
+      {}
       {!targetNode && !targetEdge && (
         <>
           <button

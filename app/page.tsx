@@ -68,7 +68,7 @@ type StudioMode = 'drawio' | 'yfiles';
 
 export default function Home() {
   const [mode, setMode] = useState<StudioMode>('drawio');
-  // Carries the draw.io XML produced by the yFiles → draw.io converter
+
   const [exportedXml, setExportedXml] = useState<string | undefined>(undefined);
 
   const handleExportToDrawio = (xml: string, _title?: string) => {

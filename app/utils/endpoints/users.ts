@@ -1,7 +1,6 @@
 import { defaults } from '../defaults';
 
 export const user = {
-  /** POST /signup */
   signup: {
     v1: {
       ...defaults.methods.POST,
@@ -10,7 +9,6 @@ export const user = {
     },
   },
 
-  /** POST /login */
   login: {
     v1: {
       ...defaults.methods.POST,
@@ -19,7 +17,6 @@ export const user = {
     },
   },
 
-  /** POST /logout */
   logout: {
     v1: {
       ...defaults.methods.POST,
@@ -28,7 +25,6 @@ export const user = {
     },
   },
 
-  /** GET /users */
   getUsers: {
     v1: {
       ...defaults.methods.GET,
@@ -37,7 +33,6 @@ export const user = {
     },
   },
 
-  /** GET /users/:id */
   getUserById: {
     v1: {
       ...defaults.methods.GET,
@@ -46,7 +41,6 @@ export const user = {
     },
   },
 
-  /** POST /users */
   createUser: {
     v1: {
       ...defaults.methods.POST,
@@ -55,7 +49,6 @@ export const user = {
     },
   },
 
-  /** PUT /users/:id */
   updateUser: {
     v1: {
       ...defaults.methods.PUT,
@@ -64,7 +57,6 @@ export const user = {
     },
   },
 
-  /** DELETE /users/:id */
   deleteUser: {
     v1: {
       ...defaults.methods.DELETE,

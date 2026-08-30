@@ -59,7 +59,6 @@ export const SvgExportModal: React.FC<SvgExportModalProps> = ({
   const effectiveFilename =
     filename || diagramTitle.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'diagram';
 
-  // Generate SVG on option changes
   useEffect(() => {
     if (!isOpen || !graphComponent) return;
 
@@ -121,7 +120,6 @@ export const SvgExportModal: React.FC<SvgExportModalProps> = ({
     };
   }, [isOpen, graphComponent, scale, margin, background, customBg, scope]);
 
-  // Render SVG in preview DOM container
   useEffect(() => {
     if (previewContainerRef.current && svgElement && activeTab === 'preview') {
       previewContainerRef.current.innerHTML = '';
@@ -192,7 +190,7 @@ export const SvgExportModal: React.FC<SvgExportModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-150">
       <div className="relative w-full max-w-5xl h-[88vh] bg-zinc-900 border border-zinc-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-zinc-200 select-none">
-        {/* Modal Header */}
+        {}
         <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/90">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
@@ -209,7 +207,7 @@ export const SvgExportModal: React.FC<SvgExportModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Tab switch */}
+            {}
             <div className="flex items-center bg-zinc-950/80 border border-zinc-800 rounded-lg p-0.5">
               <button
                 onClick={() => setActiveTab('preview')}
@@ -245,9 +243,9 @@ export const SvgExportModal: React.FC<SvgExportModalProps> = ({
           </div>
         </div>
 
-        {/* Modal Body */}
+        {}
         <div className="flex-1 flex overflow-hidden">
-          {/* Main Preview / Code View */}
+          {}
           <div className="flex-1 flex flex-col bg-zinc-950/60 p-6 overflow-hidden relative">
             {activeTab === 'preview' ? (
               <div
@@ -292,7 +290,7 @@ export const SvgExportModal: React.FC<SvgExportModalProps> = ({
               </div>
             )}
 
-            {/* Bottom Status Info */}
+            {}
             <div className="mt-3 flex items-center justify-between text-xs text-zinc-400">
               <div className="flex items-center gap-4">
                 <span>
@@ -318,10 +316,10 @@ export const SvgExportModal: React.FC<SvgExportModalProps> = ({
             </div>
           </div>
 
-          {/* Right Controls Panel */}
+          {}
           <div className="w-80 border-l border-zinc-800 bg-zinc-900/60 p-5 flex flex-col justify-between overflow-y-auto space-y-5">
             <div className="space-y-4">
-              {/* Filename */}
+              {}
               <div>
                 <label className="text-xs font-semibold text-zinc-300 mb-1.5 block">
                   Export Filename
@@ -338,7 +336,7 @@ export const SvgExportModal: React.FC<SvgExportModalProps> = ({
                 </div>
               </div>
 
-              {/* Scope */}
+              {}
               <div>
                 <label className="text-xs font-semibold text-zinc-300 mb-1.5 flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-zinc-400" />
@@ -367,7 +365,7 @@ export const SvgExportModal: React.FC<SvgExportModalProps> = ({
                 </div>
               </div>
 
-              {/* Scale */}
+              {}
               <div>
                 <label className="text-xs font-semibold text-zinc-300 mb-1.5 flex items-center gap-1.5">
                   <Maximize className="w-3.5 h-3.5 text-zinc-400" />
@@ -390,7 +388,7 @@ export const SvgExportModal: React.FC<SvgExportModalProps> = ({
                 </div>
               </div>
 
-              {/* Padding / Margin */}
+              {}
               <div>
                 <label className="text-xs font-semibold text-zinc-300 mb-1.5 block">
                   Margin / Padding: {margin}px
@@ -406,7 +404,7 @@ export const SvgExportModal: React.FC<SvgExportModalProps> = ({
                 />
               </div>
 
-              {/* Background Color */}
+              {}
               <div>
                 <label className="text-xs font-semibold text-zinc-300 mb-1.5 flex items-center gap-1.5">
                   <Palette className="w-3.5 h-3.5 text-zinc-400" />
@@ -454,7 +452,7 @@ export const SvgExportModal: React.FC<SvgExportModalProps> = ({
               </div>
             </div>
 
-            {/* Actions */}
+            {}
             <div className="space-y-2 pt-4 border-t border-zinc-800">
               <button
                 onClick={handleDownloadSvg}

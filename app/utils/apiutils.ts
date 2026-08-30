@@ -1,10 +1,3 @@
-/**
- * Utility methods for invoking API endpoints.
- *
- * Authentication is handled via HttpOnly cookie (set by the backend on /login).
- * `credentials: 'include'` is passed on every request so the browser attaches
- * the cookie automatically — no manual token management needed.
- */
 
 export interface UriEndPoint {
   uri: string;
@@ -25,8 +18,6 @@ interface QueryParams {
   [key: string]: string | number | boolean | undefined;
 }
 
-// ─── URL construction ─────────────────────────────────────────────────────────
-
 const getBaseUrl = (): string =>
   process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -46,11 +37,18 @@ const makeUrl = ({
 
   const resolvedUri = uri
     .split('/')
-    .map(segment =>
-      segment.startsWith(':')
-        ? encodeURIComponent(pathParams?.[segment.slice(1)] ?? '')
-        : segment,
-    )
+    .map(segment => {
+      if (!segment.startsWith(':')) return segment;
+      const key = segment.slice(1);
+      const value = pathParams?.[key];
+      if (!value) {
+        throw new Error(
+          `[callApi] Missing path param ":${key}" for URI "${uri}". ` +
+          `Received pathParams: ${JSON.stringify(pathParams ?? {})}`,
+        );
+      }
+      return encodeURIComponent(value);
+    })
     .join('/');
 
   const queryString =
@@ -65,13 +63,11 @@ const makeUrl = ({
   return `${base}${version}${resolvedUri}${queryString}`;
 };
 
-// ─── Fetch wrapper ────────────────────────────────────────────────────────────
-
 interface CallFetchInput {
   uriEndPoint: UriEndPoint;
   pathParams?: PathParams;
   query?: QueryParams;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   body?: Record<string, any>;
   fetchProps?: RequestInit;
 }
@@ -100,7 +96,7 @@ const callFetch = async <T>({
     method: uriEndPoint.method,
     headers,
     body: isReadMethod ? undefined : JSON.stringify(body ?? {}),
-    credentials: 'include', // sends the HttpOnly Authorization cookie
+    credentials: 'include', 
     ...restFetchProps,
   });
 
@@ -118,25 +114,15 @@ const callFetch = async <T>({
   return { data: data as T, status: response.status };
 };
 
-// ─── Public callApi ───────────────────────────────────────────────────────────
-
 interface CallApiProps {
   uriEndPoint: UriEndPoint;
   pathParams?: PathParams;
   query?: QueryParams;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   body?: Record<string, any>;
   fetchProps?: RequestInit;
 }
 
-/**
- * Generic utility for invoking any REST endpoint.
- *
- * - Automatically attaches the HttpOnly session cookie.
- * - On 401, dispatches a custom `unauthorized` window event so the app can
- *   show the auth modal without coupling this utility to any React state.
- * - On 403, redirects to `/`.
- */
 export function callApi<ResponseType>({
   uriEndPoint,
   pathParams,
@@ -159,7 +145,7 @@ export function callApi<ResponseType>({
         )?.response?.status;
 
         if (status === 401) {
-          // Let the UI layer react (e.g. show the AuthModal) without a hard coupling
+
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('diagram:unauthorized'));
           }

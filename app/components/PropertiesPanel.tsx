@@ -19,20 +19,28 @@ import {
   Tag,
   Activity,
   Layers,
-  Sparkles
+  Sparkles,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import {
   type DiagramEdgeData,
   type DiagramNodeData,
-  type NodeShape
+  type NodeShape,
+  createEdgeStyle,
 } from '../utils/yfiles-styles';
 import { type LayoutType } from '../utils/yfiles-layouts';
+import type { Metamodel } from '../utils/metamodel';
+import { findObjectType } from '../utils/metamodel';
+import { MetamodelInstanceEditor } from './MetamodelInstanceEditor';
 
 interface PropertiesPanelProps {
   selectedItem: IModelItem | null;
   graphComponent: GraphComponent | null;
   onUpdate: () => void;
   onRunLayout: (type: LayoutType) => void;
+  
+  metamodel?: Metamodel;
 }
 
 const COLOR_PRESETS = [
@@ -75,7 +83,6 @@ const SHAPES: { id: NodeShape; label: string }[] = [
   { id: 'hexagon', label: 'Hexagon' }
 ];
 
-// Helper to mutate yFiles items
 function mutateNodeTag(
   gc: GraphComponent,
   targetNode: INode,
@@ -104,8 +111,12 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
   selectedItem,
   graphComponent,
   onUpdate,
-  onRunLayout
+  onRunLayout,
+  metamodel,
 }) => {
+
+  const [showVisual, setShowVisual] = React.useState(true);
+  const [showMetamodel, setShowMetamodel] = React.useState(true);
   if (!graphComponent) return null;
 
   const isNode = selectedItem && 'layout' in selectedItem;
@@ -130,6 +141,9 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
   const handleUpdateEdgeTag = (partial: Partial<DiagramEdgeData>) => {
     if (!edge || !graphComponent) return;
     mutateEdgeTag(graphComponent, edge, partial);
+
+    const updatedTag = { ...(edge.tag as DiagramEdgeData), ...partial };
+    graphComponent.graph.setStyle(edge, createEdgeStyle(updatedTag));
     onUpdate();
   };
 
@@ -181,7 +195,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
 
   return (
     <aside className="w-72 h-full bg-zinc-900/90 border-l border-zinc-800/80 flex flex-col backdrop-blur-xl select-none z-10">
-      {/* Header */}
+      {}
       <div className="p-3.5 border-b border-zinc-800/80 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Sliders className="w-4 h-4 text-indigo-400" />
@@ -195,10 +209,10 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
       </div>
 
       <div className="flex-1 overflow-y-auto p-3.5 space-y-4">
-        {/* Node Properties */}
+        {}
         {node && (
           <>
-            {/* Title & Subtitle */}
+            {}
             <div className="space-y-2">
               <label className="text-[11px] font-semibold text-zinc-400 flex items-center gap-1.5">
                 <Type className="w-3.5 h-3.5 text-zinc-400" />
@@ -220,7 +234,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               />
             </div>
 
-            {/* Shape Geometry */}
+            {}
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold text-zinc-400 flex items-center gap-1.5">
                 <Shapes className="w-3.5 h-3.5 text-zinc-400" />
@@ -241,7 +255,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               </select>
             </div>
 
-            {/* Icon */}
+            {}
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold text-zinc-400 flex items-center gap-1.5">
                 <Layers className="w-3.5 h-3.5 text-zinc-400" />
@@ -260,7 +274,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               </select>
             </div>
 
-            {/* Color Palette */}
+            {}
             <div className="space-y-2">
               <label className="text-[11px] font-semibold text-zinc-400 flex items-center gap-1.5">
                 <Palette className="w-3.5 h-3.5 text-zinc-400" />
@@ -284,7 +298,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               </div>
             </div>
 
-            {/* Badge & Status */}
+            {}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-[11px] font-semibold text-zinc-400 flex items-center gap-1 mb-1">
@@ -323,13 +337,12 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               </div>
             </div>
 
-            {/* Size Dimensions */}
+            {}
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold text-zinc-400 flex items-center gap-1.5">
                 <Maximize2 className="w-3.5 h-3.5 text-zinc-400" />
                 <span>Dimensions (W × H)</span>
-              </label>
-              <div className="grid grid-cols-2 gap-2">
+              </label>              <div className="grid grid-cols-2 gap-2">
                 <div className="flex items-center gap-1.5 bg-zinc-950/80 border border-zinc-800 rounded-lg px-2 py-1">
                   <span className="text-[10px] text-zinc-500 font-mono">W:</span>
                   <input
@@ -355,7 +368,42 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               </div>
             </div>
 
-            {/* Delete Action */}
+            {}
+            {metamodel && nodeTag.objectTypeId && (() => {
+              const objectType = findObjectType(metamodel, nodeTag.objectTypeId);
+              if (!objectType) return null;
+              return (
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setShowMetamodel(!showMetamodel)}
+                    className="w-full flex items-center gap-1.5 text-[11px] font-semibold text-zinc-400 hover:text-zinc-200 transition-colors"
+                  >
+                    {showMetamodel ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                    <span className="uppercase tracking-wider">Type Attributes</span>
+                  </button>
+                  {showMetamodel && (
+                    <MetamodelInstanceEditor
+                      objectType={objectType}
+                      instanceAttributes={nodeTag.instanceAttributes ?? {}}
+                      onChangeAttributes={(updated) => {
+                        handleUpdateNodeTag({ instanceAttributes: updated });
+                      }}
+                    />
+                  )}
+                </div>
+              );
+            })()}
+
+            {}
+            <button
+              onClick={() => setShowVisual(!showVisual)}
+              className="w-full flex items-center gap-1.5 text-[11px] font-semibold text-zinc-400 hover:text-zinc-200 transition-colors"
+            >
+              {showVisual ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+              <span className="uppercase tracking-wider">Visual Overrides</span>
+            </button>
+
+            {}
             <div className="pt-2 border-t border-zinc-800">
               <button
                 onClick={handleDeleteItem}
@@ -368,7 +416,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
           </>
         )}
 
-        {/* Edge Properties */}
+        {}
         {edge && (
           <>
             <div className="space-y-2">
@@ -385,7 +433,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               />
             </div>
 
-            {/* Edge Color */}
+            {}
             <div className="space-y-2">
               <label className="text-[11px] font-semibold text-zinc-400 flex items-center gap-1.5">
                 <Palette className="w-3.5 h-3.5 text-zinc-400" />
@@ -409,7 +457,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               </div>
             </div>
 
-            {/* Reverse & Delete */}
+            {}
             <div className="pt-3 border-t border-zinc-800 space-y-2">
               <button
                 onClick={handleReverseEdge}
@@ -429,10 +477,10 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
           </>
         )}
 
-        {/* Canvas Overview / No Selection */}
+        {}
         {!node && !edge && (
           <div className="space-y-4">
-            {/* Diagram Stats */}
+            {}
             <div className="p-3 bg-zinc-950/50 border border-zinc-800 rounded-xl space-y-2">
               <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
                 Graph Statistics
@@ -453,7 +501,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               </div>
             </div>
 
-            {/* Quick Auto Layout */}
+            {}
             <div className="space-y-2">
               <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
                 Automated Layouts

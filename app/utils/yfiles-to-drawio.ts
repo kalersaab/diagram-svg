@@ -1,15 +1,6 @@
-/**
- * yFiles → draw.io XML converter
- *
- * Walks the yFiles IGraph (nodes + edges) and produces a valid
- * mxfile / mxGraphModel XML string that can be loaded directly
- * into the draw.io editor via loadDiagramIntoDrawio().
- */
 
 import type { GraphComponent } from '@yfiles/yfiles';
 import type { DiagramNodeData, DiagramEdgeData, NodeShape } from './yfiles-styles';
-
-// ─── helpers ─────────────────────────────────────────────────────────────────
 
 function escapeXml(s: string): string {
   if (!s) return '';
@@ -21,10 +12,6 @@ function escapeXml(s: string): string {
     .replace(/'/g, '&apos;');
 }
 
-/**
- * Convert a 6-char hex color + opacity 0–1 to draw.io's 8-char ARGB hex.
- * e.g. '#6366f1', 0.15 → '#266366f1'
- */
 function toArgbHex(hex: string, alpha: number): string {
   const clean = hex.replace('#', '').padEnd(6, '0').slice(0, 6);
   const clamped = Math.min(Math.max(alpha, 0), 1);
@@ -34,8 +21,6 @@ function toArgbHex(hex: string, alpha: number): string {
     .toUpperCase();
   return `#${a}${clean.toUpperCase()}`;
 }
-
-// ─── shape → draw.io style string ────────────────────────────────────────────
 
 const SHAPE_STYLE: Record<NodeShape, string> = {
   card:      'rounded=1;arcSize=7;',
@@ -69,6 +54,7 @@ function buildNodeStyle(tag: DiagramNodeData): string {
     'verticalAlign=middle;',
     'whiteSpace=wrap;',
     'overflow=hidden;',
+    'html=1;',
   ].join('');
 }
 
@@ -90,24 +76,26 @@ function buildEdgeStyle(tag: DiagramEdgeData | null | undefined): string {
     'endArrow=block;endFill=1;',
     'fontColor=#A1A1AA;',
     'fontSize=10;',
+    'html=1;',
   ].join('');
 }
 
-// ─── label builder (title + subtitle as HTML) ────────────────────────────────
-
 function buildNodeLabel(tag: DiagramNodeData): string {
   const title    = escapeXml(tag.title ?? 'Node');
-  const subtitle = tag.subtitle ? `<br/><font style="font-size:9px;font-weight:normal;opacity:0.7;">${escapeXml(tag.subtitle)}</font>` : '';
-  const badge    = tag.badge    ? `<br/><font style="font-size:8px;font-weight:normal;background:#ffffff22;border-radius:4px;padding:0 4px;">${escapeXml(tag.badge)}</font>` : '';
-  return `<b>${title}</b>${subtitle}${badge}`;
+  const subtitle = tag.subtitle
+    ? `&lt;br/&gt;&lt;font style=&quot;font-size:9px;font-weight:normal;opacity:0.7;&quot;&gt;${escapeXml(tag.subtitle)}&lt;/font&gt;`
+    : '';
+  const badge = tag.badge
+    ? `&lt;br/&gt;&lt;font style=&quot;font-size:8px;font-weight:normal;&quot;&gt;[${escapeXml(tag.badge)}]&lt;/font&gt;`
+    : '';
+
+  return `&lt;b&gt;${title}&lt;/b&gt;${subtitle}${badge}`;
 }
 
-// ─── main converter ───────────────────────────────────────────────────────────
-
 export interface ConvertOptions {
-  /** Diagram title shown in draw.io page tab */
+  
   title?: string;
-  /** Page id used inside the XML */
+  
   diagramId?: string;
 }
 
@@ -119,20 +107,18 @@ export function yFilesToDrawioXml(
 
   const graph = gc.graph;
 
-  // draw.io reserves cell ids 0 and 1 (root cells)
   let idCounter = 2;
   const nodeIdMap = new Map<object, string>();
 
   const cellLines: string[] = [];
 
-  // ── nodes ──────────────────────────────────────────────────────────────────
   for (const node of graph.nodes) {
     const id = String(idCounter++);
     nodeIdMap.set(node, id);
 
     const { x, y, width, height } = node.layout;
     const tag   = (node.tag as DiagramNodeData) ?? {};
-    const label = buildNodeLabel(tag);
+    const label = buildNodeLabel(tag);  
     const style = buildNodeStyle(tag);
 
     cellLines.push(
@@ -141,13 +127,12 @@ export function yFilesToDrawioXml(
     );
   }
 
-  // ── edges ──────────────────────────────────────────────────────────────────
   for (const edge of graph.edges) {
     const id       = String(idCounter++);
     const sourceId = nodeIdMap.get(edge.sourceNode!);
     const targetId = nodeIdMap.get(edge.targetNode!);
 
-    if (!sourceId || !targetId) continue; // skip dangling edges
+    if (!sourceId || !targetId) continue; 
 
     const tag   = edge.tag as DiagramEdgeData | null | undefined;
     const label = escapeXml(
@@ -156,7 +141,6 @@ export function yFilesToDrawioXml(
     );
     const style = buildEdgeStyle(tag);
 
-    // Build bend points (intermediate waypoints)
     let bendXml = '';
     if (edge.bends.size > 0) {
       const points = edge.bends
