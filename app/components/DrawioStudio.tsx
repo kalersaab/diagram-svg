@@ -1,0 +1,311 @@
+'use client';
+
+import React, { useState, useCallback, useEffect } from 'react';
+import {
+  PenTool,
+  Eye,
+  LayoutGrid,
+  Columns,
+  ArrowLeft,
+  Sparkles,
+  Loader2,
+} from 'lucide-react';
+import { DrawioEmbed } from './DrawioEmbed';
+import { DrawioViewer } from './DrawioViewer';
+import { DrawioGallery } from './DrawioGallery';
+import { AuthModal } from './AuthModal';
+import {
+  type StoredDiagram,
+  getStoredDiagrams,
+  saveDiagramToStorage,
+  setActiveDiagramId,
+} from '../utils/diagram-storage';
+import DiagramService from '@/app/services/diagram';
+import { BLANK_DRAWIO_XML } from '../utils/drawio-bridge';
+import { useAuth } from '@/app/hooks/useAuth';
+
+const diagramService = new DiagramService();
+export type DrawioStudioTab = 'editor' | 'viewer' | 'gallery' | 'split';
+
+interface DrawioStudioProps {
+  className?: string;
+  onBack?: () => void;
+  /** Optional XML to pre-load into the editor (e.g. exported from yFiles) */
+  initialXml?: string;
+  /** If provided, jump straight to the editor tab instead of gallery */
+  initialTab?: DrawioStudioTab;
+}
+
+export function DrawioStudio({ className = '', onBack, initialXml, initialTab }: DrawioStudioProps) {
+  const auth = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  const [activeTab, setActiveTab] = useState<DrawioStudioTab>(initialTab ?? 'gallery');
+  const [diagrams, setDiagrams] = useState<StoredDiagram[]>([]);
+  const [activeDiagram, setActiveDiagram] = useState<StoredDiagram | null>(null);
+  const [loadingDiagrams, setLoadingDiagrams] = useState(false);
+
+  // Current SVG and XML state for viewer
+  const [currentSvg, setCurrentSvg] = useState<string>('');
+  const [currentXml, setCurrentXml] = useState<string>(initialXml ?? BLANK_DRAWIO_XML);
+
+  // ─── Load diagrams ──────────────────────────────────────────────────────────
+
+  /** Fetch from API when authenticated, fall back to localStorage otherwise. */
+  const loadDiagrams = useCallback(async (authenticated: boolean) => {
+    if (authenticated) {
+      setLoadingDiagrams(true);
+      try {
+        const remote = await diagramService.getDiagrams();
+        setDiagrams(remote);
+      } catch (err) {
+        console.error('Failed to load diagrams from API, falling back to localStorage', err);
+        setDiagrams(getStoredDiagrams());
+      } finally {
+        setLoadingDiagrams(false);
+      }
+    } else {
+      setDiagrams(getStoredDiagrams());
+    }
+  }, []);
+
+  // Initial load + reload when auth status changes
+  useEffect(() => {
+    if (auth.status === 'loading') return;
+    loadDiagrams(auth.status === 'authenticated');
+  }, [auth.status, loadDiagrams]);
+
+  // ─── Save handler (called by DrawioEmbed on save/autosave) ─────────────────
+
+  const handleSave = useCallback(
+    async (xml: string, svg?: string) => {
+      if (!activeDiagram) return;
+
+      const updated: StoredDiagram = {
+        ...activeDiagram,
+        xml,
+        svg: svg ?? activeDiagram.svg,
+        updatedAt: Date.now(),
+      };
+
+      // Optimistically update local state first for instant feedback
+      setActiveDiagram(updated);
+      setCurrentXml(xml);
+      if (svg) setCurrentSvg(svg);
+      setDiagrams(prev => prev.map(d => (d.id === updated.id ? updated : d)));
+
+      if (auth.status === 'authenticated') {
+        try {
+          const persisted = await diagramService.updateDiagram(activeDiagram.id, { xml, svg });
+          // Reconcile timestamps from server
+          setActiveDiagram(persisted);
+          setDiagrams(prev => prev.map(d => (d.id === persisted.id ? persisted : d)));
+        } catch (err) {
+          console.error('Failed to save diagram to API, saved locally', err);
+          saveDiagramToStorage(updated);
+        }
+      } else {
+        saveDiagramToStorage(updated);
+      }
+    },
+    [activeDiagram, auth.status],
+  );
+
+  // ─── Open a diagram for editing ────────────────────────────────────────────
+
+  const handleEditDiagram = useCallback((diagram: StoredDiagram) => {
+    setActiveDiagram(diagram);
+    setCurrentXml(diagram.xml);
+    if (diagram.svg) setCurrentSvg(diagram.svg);
+    setActiveDiagramId(diagram.id);
+    setActiveTab('editor');
+  }, []);
+
+  // ─── View SVG ──────────────────────────────────────────────────────────────
+
+  const handleViewDiagram = useCallback((diagram: StoredDiagram) => {
+    setActiveDiagram(diagram);
+    setCurrentXml(diagram.xml);
+    if (diagram.svg) {
+      setCurrentSvg(diagram.svg);
+      setActiveTab('viewer');
+    } else {
+      setActiveTab('editor');
+    }
+  }, []);
+
+  const handleViewSvg = useCallback(() => {
+    if (currentSvg) setActiveTab('viewer');
+  }, [currentSvg]);
+
+  // ─── Create new diagram (for gallery "new" button via auth path) ────────────
+
+  const handleNewDiagramFromGallery = useCallback(
+    async (diagram: StoredDiagram) => {
+      if (auth.status === 'authenticated') {
+        try {
+          const saved = await diagramService.createDiagram({
+            title: diagram.title,
+            description: diagram.description,
+            category: diagram.category,
+            xml: diagram.xml,
+          });
+          setDiagrams(prev => [saved, ...prev]);
+          handleEditDiagram(saved);
+          return;
+        } catch (err) {
+          console.error('API create failed, using local id', err);
+        }
+      }
+      handleEditDiagram(diagram);
+    },
+    [auth.status, handleEditDiagram],
+  );
+  void handleNewDiagramFromGallery; // consumed by DrawioGallery's own create handler
+
+  // ─── Tabs ──────────────────────────────────────────────────────────────────
+
+  const tabs: { id: DrawioStudioTab; label: string; icon: React.ReactNode }[] = [
+    { id: 'gallery', label: 'Gallery', icon: <LayoutGrid className="w-3.5 h-3.5" /> },
+    { id: 'editor', label: 'Draw.io Editor', icon: <PenTool className="w-3.5 h-3.5" /> },
+    { id: 'viewer', label: 'SVG Viewer', icon: <Eye className="w-3.5 h-3.5" /> },
+    { id: 'split', label: 'Split View', icon: <Columns className="w-3.5 h-3.5" /> },
+  ];
+
+  return (
+    <div className={`flex flex-col h-full w-full bg-zinc-950 text-zinc-100 overflow-hidden ${className}`}>
+      {/* Auth modal */}
+      {showAuthModal && (
+        <AuthModal
+          auth={auth}
+          onClose={() => setShowAuthModal(false)}
+        />
+      )}
+
+      {/* Studio Navigation Bar */}
+      <div className="h-12 border-b border-zinc-800/80 bg-zinc-900/90 px-4 flex items-center gap-3 shrink-0 backdrop-blur-md">
+        {/* Back to yFiles */}
+        {onBack && (
+          <>
+            <button
+              onClick={onBack}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>yFiles Studio</span>
+            </button>
+            <div className="h-5 w-px bg-zinc-800" />
+          </>
+        )}
+
+        {/* Logo */}
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md shadow-indigo-500/20">
+            <Sparkles className="w-3.5 h-3.5 text-white" />
+          </div>
+          <span className="text-sm font-bold tracking-tight">
+            Draw<span className="text-indigo-400">.io</span>
+            <span className="text-zinc-500 font-normal ml-1.5 text-xs">Studio</span>
+          </span>
+        </div>
+
+        <div className="h-5 w-px bg-zinc-800 mx-1" />
+
+        {/* Tab Buttons */}
+        <div className="flex items-center gap-1">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 ${
+                activeTab === tab.id
+                  ? 'bg-indigo-500/15 text-indigo-400 shadow-sm shadow-indigo-500/10'
+                  : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800'
+              }`}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Active Diagram Indicator */}
+        {activeDiagram && activeTab !== 'gallery' && (
+          <>
+            <div className="h-5 w-px bg-zinc-800 mx-1" />
+            <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-zinc-800/50 border border-zinc-700/50">
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="text-[11px] text-zinc-300 font-medium truncate max-w-[200px]">
+                {activeDiagram.title}
+              </span>
+            </div>
+          </>
+        )}
+
+        {/* Loading indicator */}
+        {loadingDiagrams && (
+          <div className="ml-auto flex items-center gap-1.5 text-[11px] text-zinc-500">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            <span>Loading…</span>
+          </div>
+        )}
+      </div>
+
+      {/* Tab Content */}
+      <div className="flex-1 overflow-hidden">
+        {/* Gallery Tab */}
+        {activeTab === 'gallery' && (
+          <DrawioGallery
+            diagrams={diagrams}
+            onDiagramsChange={setDiagrams}
+            onEditDiagram={handleEditDiagram}
+            onViewDiagram={handleViewDiagram}
+            auth={auth}
+            onShowAuth={() => setShowAuthModal(true)}
+          />
+        )}
+
+        {/* Editor Tab */}
+        {activeTab === 'editor' && (
+          <DrawioEmbed
+            initialXml={currentXml}
+            diagramTitle={activeDiagram?.title}
+            onSave={handleSave}
+            onViewSvg={handleViewSvg}
+            autoExportSvg
+          />
+        )}
+
+        {/* Viewer Tab */}
+        {activeTab === 'viewer' && (
+          <DrawioViewer
+            svgContent={currentSvg}
+            diagramTitle={activeDiagram?.title}
+            diagramXml={currentXml}
+          />
+        )}
+
+        {/* Split View Tab */}
+        {activeTab === 'split' && (
+          <div className="flex h-full overflow-hidden">
+            <div className="flex-1 border-r border-zinc-800 h-full overflow-hidden">
+              <DrawioEmbed
+                initialXml={currentXml}
+                diagramTitle={activeDiagram?.title}
+                onSave={handleSave}
+                autoExportSvg
+              />
+            </div>
+            <div className="flex-1 h-full overflow-hidden">
+              <DrawioViewer
+                svgContent={currentSvg}
+                diagramTitle={activeDiagram?.title}
+                diagramXml={currentXml}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

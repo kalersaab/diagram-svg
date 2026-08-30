@@ -1,69 +1,94 @@
-import Image from "next/image";
+'use client';
+
+import dynamic from 'next/dynamic';
+import React, { useState } from 'react';
+import { Sparkles, PenTool } from 'lucide-react';
+
+const DiagramEditor = dynamic(
+  () => import('./components/DiagramEditor'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-screen h-screen flex flex-col items-center justify-center bg-zinc-950 text-zinc-200">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/30 animate-pulse">
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+            <div className="absolute -inset-1 rounded-2xl bg-indigo-500/20 blur-md -z-10 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-sm font-semibold text-white tracking-tight">
+              Diagram<span className="text-indigo-400">SVG</span> Studio
+            </span>
+            <span className="text-xs text-zinc-500">
+              Initializing yFiles Graph Engine...
+            </span>
+          </div>
+          <div className="w-32 h-1 bg-zinc-800 rounded-full overflow-hidden mt-2">
+            <div className="w-full h-full bg-gradient-to-r from-indigo-500 to-purple-500 animate-[shimmer_1.5s_infinite]" />
+          </div>
+        </div>
+      </div>
+    )
+  }
+);
+
+const DrawioStudio = dynamic(
+  () => import('./components/DrawioStudio').then((mod) => ({ default: mod.DrawioStudio })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-screen h-screen flex flex-col items-center justify-center bg-zinc-950 text-zinc-200">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/30 animate-pulse">
+              <PenTool className="w-6 h-6 text-white" />
+            </div>
+            <div className="absolute -inset-1 rounded-2xl bg-purple-500/20 blur-md -z-10 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-sm font-semibold text-white tracking-tight">
+              Draw<span className="text-indigo-400">.io</span> Studio
+            </span>
+            <span className="text-xs text-zinc-500">
+              Loading Draw.io Integration Engine...
+            </span>
+          </div>
+          <div className="w-32 h-1 bg-zinc-800 rounded-full overflow-hidden mt-2">
+            <div className="w-full h-full bg-gradient-to-r from-purple-500 to-pink-500 animate-[shimmer_1.5s_infinite]" />
+          </div>
+        </div>
+      </div>
+    )
+  }
+);
+
+type StudioMode = 'drawio' | 'yfiles';
 
 export default function Home() {
+  const [mode, setMode] = useState<StudioMode>('drawio');
+  // Carries the draw.io XML produced by the yFiles → draw.io converter
+  const [exportedXml, setExportedXml] = useState<string | undefined>(undefined);
+
+  const handleExportToDrawio = (xml: string, _title?: string) => {
+    setExportedXml(xml);
+    setMode('drawio');
+  };
+
+  if (mode === 'yfiles') {
+    return (
+      <div className="flex flex-col w-screen h-screen overflow-hidden bg-zinc-950">
+        <DiagramEditor onExportToDrawio={handleExportToDrawio} />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <DrawioStudio
+      onBack={() => setMode('yfiles')}
+      initialXml={exportedXml}
+      initialTab={exportedXml ? 'editor' : undefined}
+    />
   );
 }
