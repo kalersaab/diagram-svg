@@ -1,9 +1,7 @@
-'use client';
-
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   PenTool,
-  Eye,
+  FolderKanban,
   LayoutGrid,
   Columns,
   ArrowLeft,
@@ -11,7 +9,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { DrawioEmbed } from './DrawioEmbed';
-import { DrawioViewer } from './DrawioViewer';
+import { ModelsTableView } from './ModelsTableView';
 import { DrawioGallery } from './DrawioGallery';
 import { AuthModal } from './AuthModal';
 import {
@@ -22,22 +20,23 @@ import {
   syncLocalDiagramsToBackend,
 } from '../utils/diagram-storage';
 import DiagramService from '@/app/services/diagram';
+import YFilesService, { type YFilesModelRecord } from '@/app/services/yfiles';
 import { BLANK_DRAWIO_XML } from '../utils/drawio-bridge';
 import { useAuth } from '@/app/hooks/useAuth';
 
 const diagramService = new DiagramService();
-export type DrawioStudioTab = 'editor' | 'viewer' | 'gallery' | 'split';
+const yfilesService = new YFilesService();
+export type DrawioStudioTab = 'editor' | 'models' | 'gallery' | 'split';
 
 interface DrawioStudioProps {
   className?: string;
   onBack?: () => void;
-  
   initialXml?: string;
-  
   initialTab?: DrawioStudioTab;
+  onLoadYFilesModel?: (model: YFilesModelRecord) => void;
 }
 
-export function DrawioStudio({ className = '', onBack, initialXml, initialTab }: DrawioStudioProps) {
+export function DrawioStudio({ className = '', onBack, initialXml, initialTab, onLoadYFilesModel }: DrawioStudioProps) {
   const auth = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
 
@@ -129,12 +128,10 @@ export function DrawioStudio({ className = '', onBack, initialXml, initialTab }:
 
       if (auth.status === 'authenticated') {
         try {
-
           const isNewDiagram = diagram.id.startsWith('exported_');
 
           let persisted: StoredDiagram;
           if (isNewDiagram) {
-
             persisted = await diagramService.createDiagram({
               title: updated.title,
               description: updated.description,
@@ -143,12 +140,11 @@ export function DrawioStudio({ className = '', onBack, initialXml, initialTab }:
               svg: updated.svg,
             });
           } else {
-
             persisted = await diagramService.updateDiagram(diagram.id, { xml, svg });
           }
           setActiveDiagram(persisted);
-          setDiagrams(prev => 
-            isNewDiagram 
+          setDiagrams(prev =>
+            isNewDiagram
               ? [persisted, ...prev]
               : prev.map(d => (d.id === persisted.id ? persisted : d))
           );
@@ -174,17 +170,13 @@ export function DrawioStudio({ className = '', onBack, initialXml, initialTab }:
   const handleViewDiagram = useCallback((diagram: StoredDiagram) => {
     setActiveDiagram(diagram);
     setCurrentXml(diagram.xml);
-    if (diagram.svg) {
-      setCurrentSvg(diagram.svg);
-      setActiveTab('viewer');
-    } else {
-      setActiveTab('editor');
-    }
+    if (diagram.svg) setCurrentSvg(diagram.svg);
+    setActiveTab('editor');
   }, []);
 
   const handleViewSvg = useCallback(() => {
-    if (currentSvg) setActiveTab('viewer');
-  }, [currentSvg]);
+    setActiveTab('editor');
+  }, []);
 
   const handleNewDiagramFromGallery = useCallback(
     async (diagram: StoredDiagram) => {
@@ -207,18 +199,54 @@ export function DrawioStudio({ className = '', onBack, initialXml, initialTab }:
     },
     [auth.status, handleEditDiagram],
   );
-  void handleNewDiagramFromGallery; 
+  void handleNewDiagramFromGallery;
+
+  const [savedYFilesModels, setSavedYFilesModels] = useState<YFilesModelRecord[]>([]);
+  const [loadingYFilesModels, setLoadingYFilesModels] = useState(false);
+
+  const fetchYFilesModels = useCallback(async () => {
+    setLoadingYFilesModels(true);
+    try {
+      const models = await yfilesService.getYFilesModels();
+      setSavedYFilesModels(models);
+    } catch (err) {
+      console.error('Failed to fetch yFiles models', err);
+    } finally {
+      setLoadingYFilesModels(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (auth.status === 'authenticated') {
+      fetchYFilesModels();
+    }
+  }, [auth.status, fetchYFilesModels]);
+
+  const handleDeleteYFilesModel = useCallback(async (id: string) => {
+    try {
+      await yfilesService.deleteYFilesModel(id);
+      setSavedYFilesModels(prev => prev.filter(m => m._id !== id));
+    } catch (err) {
+      console.error('Failed to delete yFiles model', err);
+      alert('Failed to delete model.');
+    }
+  }, []);
+
+  const handleOpenXmlInDrawio = useCallback((xml: string) => {
+    setCurrentXml(xml);
+    setActiveTab('editor');
+    setEditorKey(k => k + 1);
+  }, []);
 
   const tabs: { id: DrawioStudioTab; label: string; icon: React.ReactNode }[] = [
     { id: 'gallery', label: 'Gallery', icon: <LayoutGrid className="w-3.5 h-3.5" /> },
     { id: 'editor', label: 'Draw.io Editor', icon: <PenTool className="w-3.5 h-3.5" /> },
-    { id: 'viewer', label: 'SVG Viewer', icon: <Eye className="w-3.5 h-3.5" /> },
+    { id: 'models', label: 'Diagram Models', icon: <FolderKanban className="w-3.5 h-3.5" /> },
     { id: 'split', label: 'Split View', icon: <Columns className="w-3.5 h-3.5" /> },
   ];
 
   return (
     <div className={`flex flex-col h-full w-full bg-zinc-950 text-zinc-100 overflow-hidden ${className}`}>
-      {}
       {showAuthModal && (
         <AuthModal
           auth={auth}
@@ -226,9 +254,7 @@ export function DrawioStudio({ className = '', onBack, initialXml, initialTab }:
         />
       )}
 
-      {}
       <div className="h-12 border-b border-zinc-800/80 bg-zinc-900/90 px-4 flex items-center gap-3 shrink-0 backdrop-blur-md">
-        {}
         {onBack && (
           <>
             <button
@@ -242,7 +268,6 @@ export function DrawioStudio({ className = '', onBack, initialXml, initialTab }:
           </>
         )}
 
-        {}
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md shadow-indigo-500/20">
             <Sparkles className="w-3.5 h-3.5 text-white" />
@@ -255,26 +280,28 @@ export function DrawioStudio({ className = '', onBack, initialXml, initialTab }:
 
         <div className="h-5 w-px bg-zinc-800 mx-1" />
 
-        {}
         <div className="flex items-center gap-1">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 ${
-                activeTab === tab.id
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 ${activeTab === tab.id
                   ? 'bg-indigo-500/15 text-indigo-400 shadow-sm shadow-indigo-500/10'
                   : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800'
-              }`}
+                }`}
             >
               {tab.icon}
               <span>{tab.label}</span>
+              {tab.id === 'models' && savedYFilesModels.length > 0 && (
+                <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-indigo-500/20 text-indigo-300">
+                  {savedYFilesModels.length}
+                </span>
+              )}
             </button>
           ))}
         </div>
 
-        {}
-        {activeDiagram && activeTab !== 'gallery' && (
+        {activeDiagram && activeTab !== 'gallery' && activeTab !== 'models' && (
           <>
             <div className="h-5 w-px bg-zinc-800 mx-1" />
             <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-zinc-800/50 border border-zinc-700/50">
@@ -286,8 +313,7 @@ export function DrawioStudio({ className = '', onBack, initialXml, initialTab }:
           </>
         )}
 
-        {}
-        {loadingDiagrams && (
+        {(loadingDiagrams || loadingYFilesModels) && (
           <div className="ml-auto flex items-center gap-1.5 text-[11px] text-zinc-500">
             <Loader2 className="w-3 h-3 animate-spin" />
             <span>Loading…</span>
@@ -295,9 +321,7 @@ export function DrawioStudio({ className = '', onBack, initialXml, initialTab }:
         )}
       </div>
 
-      {}
       <div className="flex-1 overflow-hidden">
-        {}
         {activeTab === 'gallery' && (
           <DrawioGallery
             diagrams={diagrams}
@@ -309,7 +333,6 @@ export function DrawioStudio({ className = '', onBack, initialXml, initialTab }:
           />
         )}
 
-        {}
         {activeTab === 'editor' && (
           <DrawioEmbed
             key={editorKey}
@@ -321,16 +344,24 @@ export function DrawioStudio({ className = '', onBack, initialXml, initialTab }:
           />
         )}
 
-        {}
-        {activeTab === 'viewer' && (
-          <DrawioViewer
-            svgContent={currentSvg}
-            diagramTitle={activeDiagram?.title}
-            diagramXml={currentXml}
+        {activeTab === 'models' && (
+          <ModelsTableView
+            models={savedYFilesModels}
+            onLoadModel={(model) => {
+              if (onLoadYFilesModel) {
+                onLoadYFilesModel(model);
+              } else if (onBack) {
+                onBack();
+              }
+            }}
+            onDeleteModel={handleDeleteYFilesModel}
+            onOpenInDrawio={handleOpenXmlInDrawio}
+            onRefresh={fetchYFilesModels}
+            onNewModel={onBack}
+            isLoading={loadingYFilesModels}
           />
         )}
 
-        {}
         {activeTab === 'split' && (
           <div className="flex h-full overflow-hidden">
             <div className="flex-1 border-r border-zinc-800 h-full overflow-hidden">
@@ -343,10 +374,20 @@ export function DrawioStudio({ className = '', onBack, initialXml, initialTab }:
               />
             </div>
             <div className="flex-1 h-full overflow-hidden">
-              <DrawioViewer
-                svgContent={currentSvg}
-                diagramTitle={activeDiagram?.title}
-                diagramXml={currentXml}
+              <ModelsTableView
+                models={savedYFilesModels}
+                onLoadModel={(model) => {
+                  if (onLoadYFilesModel) {
+                    onLoadYFilesModel(model);
+                  } else if (onBack) {
+                    onBack();
+                  }
+                }}
+                onDeleteModel={handleDeleteYFilesModel}
+                onOpenInDrawio={handleOpenXmlInDrawio}
+                onRefresh={fetchYFilesModels}
+                onNewModel={onBack}
+                isLoading={loadingYFilesModels}
               />
             </div>
           </div>

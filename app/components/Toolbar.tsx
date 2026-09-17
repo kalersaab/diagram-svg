@@ -23,10 +23,16 @@ import {
   PanelLeft,
   PanelRight,
   MapPin,
-  PenTool
+  PenTool,
+  Save,
+  Check,
+  Loader2,
+  User as UserIcon,
+  LogIn,
 } from 'lucide-react';
 import { type LayoutType } from '../utils/yfiles-layouts';
 import { SAMPLE_TEMPLATES, type TemplateDefinition } from '../utils/SampleTemplates';
+import type { UseAuthReturn } from '@/app/hooks/useAuth';
 
 interface ToolbarProps {
   graphComponent: GraphComponent | null;
@@ -37,6 +43,8 @@ interface ToolbarProps {
   onClearGraph: () => void;
   onOpenExportModal: () => void;
   onExportToDrawio?: () => void;
+  onSaveModel?: () => void;
+  saveStatus?: 'idle' | 'saving' | 'saved' | 'error' | 'unauthenticated';
   isGridVisible: boolean;
   onToggleGrid: () => void;
   isSnappingEnabled: boolean;
@@ -47,6 +55,8 @@ interface ToolbarProps {
   onToggleLeftSidebar: () => void;
   isRightSidebarOpen: boolean;
   onToggleRightSidebar: () => void;
+  auth?: UseAuthReturn;
+  onShowAuth?: () => void;
 }
 
 const LAYOUT_OPTIONS: { id: LayoutType; label: string; desc: string }[] = [
@@ -96,6 +106,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onClearGraph,
   onOpenExportModal,
   onExportToDrawio,
+  onSaveModel,
+  saveStatus = 'idle',
   isGridVisible,
   onToggleGrid,
   isSnappingEnabled,
@@ -105,7 +117,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   isLeftSidebarOpen,
   onToggleLeftSidebar,
   isRightSidebarOpen,
-  onToggleRightSidebar
+  onToggleRightSidebar,
+  auth,
+  onShowAuth,
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isLayoutDropdownOpen, setIsLayoutDropdownOpen] = useState(false);
@@ -143,9 +157,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
   return (
     <header className="h-14 bg-zinc-900/95 border-b border-zinc-800/90 flex items-center justify-between px-4 z-30 select-none backdrop-blur-md">
-      {}
       <div className="flex items-center gap-3">
-        {}
         <button
           onClick={onToggleLeftSidebar}
           className={`p-1.5 rounded-lg border transition-colors ${
@@ -158,7 +170,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           <PanelLeft className="w-4 h-4" />
         </button>
 
-        {}
         <div className="flex items-center gap-2.5 pr-3 border-r border-zinc-800">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md shadow-indigo-500/20">
             <Sparkles className="w-4 h-4 text-white" />
@@ -173,7 +184,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           </div>
         </div>
 
-        {}
         <div className="flex items-center gap-1.5 max-w-[220px]">
           {isEditingTitle ? (
             <input
@@ -200,9 +210,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         </div>
       </div>
 
-      {}
       <div className="flex items-center gap-2">
-        {}
         <div className="relative">
           <button
             onClick={() => {
@@ -247,7 +255,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           )}
         </div>
 
-        {}
         <div className="relative">
           <button
             onClick={() => {
@@ -256,97 +263,96 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             }}
             className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-zinc-300 hover:text-white bg-zinc-950/60 hover:bg-zinc-800 border border-zinc-800 rounded-lg transition-colors"
           >
-            <LayoutGrid className="w-3.5 h-3.5 text-sky-400" />
-            <span>Auto Layout</span>
+            <LayoutGrid className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Layout</span>
             <ChevronDown className="w-3 h-3 text-zinc-500" />
           </button>
 
           {isLayoutDropdownOpen && (
             <div className="absolute left-0 top-full mt-1.5 w-60 bg-zinc-900 border border-zinc-700/80 rounded-xl shadow-2xl backdrop-blur-xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
               <div className="px-2 py-1 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
-                Automated Layout Algorithms
+                Automatic Graph Layouts
               </div>
-              {LAYOUT_OPTIONS.map((layout) => (
+              {LAYOUT_OPTIONS.map((opt) => (
                 <button
-                  key={layout.id}
+                  key={opt.id}
                   onClick={() => {
-                    onRunLayout(layout.id);
+                    onRunLayout(opt.id);
                     setIsLayoutDropdownOpen(false);
                   }}
                   className="w-full flex flex-col items-start px-2.5 py-1.5 rounded-lg hover:bg-zinc-800 hover:text-white text-left transition-colors group"
                 >
                   <span className="text-xs font-medium text-zinc-200 group-hover:text-white">
-                    {layout.label}
+                    {opt.label}
                   </span>
-                  <span className="text-[10px] text-zinc-500">{layout.desc}</span>
+                  <span className="text-[10.5px] text-zinc-500">
+                    {opt.desc}
+                  </span>
                 </button>
               ))}
             </div>
           )}
         </div>
 
-        <div className="h-4 w-px bg-zinc-800 mx-1" />
+        <div className="h-5 w-px bg-zinc-800 mx-1" />
 
-        {}
-        <div className="flex items-center bg-zinc-950/60 border border-zinc-800 rounded-lg p-0.5">
+        <div className="flex items-center gap-1 bg-zinc-950/60 border border-zinc-800 rounded-lg p-0.5">
           <button
             onClick={handleUndo}
-            className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded transition-colors"
-            title="Undo (Cmd+Z)"
+            className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
+            title="Undo (Ctrl+Z)"
           >
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={handleRedo}
-            className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded transition-colors"
-            title="Redo (Cmd+Y)"
+            className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
+            title="Redo (Ctrl+Y)"
           >
             <RotateCw className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {}
-        <div className="flex items-center bg-zinc-950/60 border border-zinc-800 rounded-lg p-0.5">
-          <button
-            onClick={handleZoomIn}
-            className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded transition-colors"
-            title="Zoom In"
-          >
-            <ZoomIn className="w-3.5 h-3.5" />
-          </button>
+        <div className="flex items-center gap-1 bg-zinc-950/60 border border-zinc-800 rounded-lg p-0.5">
           <button
             onClick={handleZoomOut}
-            className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded transition-colors"
+            className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
             title="Zoom Out"
           >
             <ZoomOut className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={handleZoomReset}
-            className="px-2 py-1 text-[11px] font-mono text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded transition-colors"
-            title="100% Zoom"
+            className="px-1.5 py-1 text-[10px] font-mono text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
+            title="Reset Zoom to 100%"
           >
-            1:1
+            100%
+          </button>
+          <button
+            onClick={handleZoomIn}
+            className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
+            title="Zoom In"
+          >
+            <ZoomIn className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={handleFitContent}
-            className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded transition-colors"
-            title="Fit All Content"
+            className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
+            title="Fit Graph into View"
           >
             <Maximize2 className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {}
-        <div className="flex items-center bg-zinc-950/60 border border-zinc-800 rounded-lg p-0.5">
+        <div className="flex items-center gap-1 bg-zinc-950/60 border border-zinc-800 rounded-lg p-0.5">
           <button
             onClick={onToggleGrid}
             className={`p-1.5 rounded transition-colors ${
               isGridVisible
-                ? 'bg-indigo-600/30 text-indigo-300'
-                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+                ? 'bg-indigo-500/20 text-indigo-400'
+                : 'text-zinc-500 hover:text-zinc-300'
             }`}
-            title="Toggle Grid"
+            title={isGridVisible ? 'Hide Grid' : 'Show Grid'}
           >
             <Grid className="w-3.5 h-3.5" />
           </button>
@@ -354,10 +360,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             onClick={onToggleSnapping}
             className={`p-1.5 rounded transition-colors ${
               isSnappingEnabled
-                ? 'bg-indigo-600/30 text-indigo-300'
-                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+                ? 'bg-indigo-500/20 text-indigo-400'
+                : 'text-zinc-500 hover:text-zinc-300'
             }`}
-            title="Toggle Snapping Guides"
+            title={isSnappingEnabled ? 'Disable Grid Snapping' : 'Enable Grid Snapping'}
           >
             <Magnet className="w-3.5 h-3.5" />
           </button>
@@ -365,16 +371,15 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             onClick={onToggleMinimap}
             className={`p-1.5 rounded transition-colors ${
               isMinimapOpen
-                ? 'bg-indigo-600/30 text-indigo-300'
-                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+                ? 'bg-indigo-500/20 text-indigo-400'
+                : 'text-zinc-500 hover:text-zinc-300'
             }`}
-            title="Toggle Minimap Navigator"
+            title={isMinimapOpen ? 'Hide Minimap' : 'Show Minimap'}
           >
             <MapPin className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {}
         <button
           onClick={onClearGraph}
           className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 border border-zinc-800 rounded-lg transition-colors"
@@ -384,9 +389,73 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         </button>
       </div>
 
-      {}
       <div className="flex items-center gap-2">
-        {}
+        {auth && (
+          <>
+            {auth.status === 'authenticated' && auth.user ? (
+              <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-zinc-800/80 border border-zinc-700/60">
+                <div className="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[10px] font-bold">
+                  {auth.user.email?.charAt(0).toUpperCase() || 'U'}
+                </div>
+                <span className="text-[11px] text-zinc-300 font-medium truncate max-w-[120px]">
+                  {auth.user.email}
+                </span>
+                <button
+                  onClick={() => auth.logout()}
+                  className="text-[10px] text-zinc-500 hover:text-rose-400 transition-colors ml-1"
+                  title="Log out"
+                >
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={onShowAuth}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white border border-zinc-700 transition-all"
+                title="Sign in to save and load diagrams from database"
+              >
+                <LogIn className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Sign In</span>
+              </button>
+            )}
+            <div className="h-5 w-px bg-zinc-800 mx-0.5" />
+          </>
+        )}
+
+        {onSaveModel && (
+          <button
+            onClick={() => onSaveModel()}
+            disabled={saveStatus === 'saving'}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+              saveStatus === 'saving'
+                ? 'bg-zinc-800 text-zinc-400 border-zinc-700 cursor-wait'
+                : saveStatus === 'saved'
+                ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700/60'
+                : saveStatus === 'error'
+                ? 'bg-rose-950/80 text-rose-300 border-rose-700/60'
+                : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white border-zinc-700 hover:border-indigo-500/50 hover:scale-[1.02] active:scale-[0.98]'
+            }`}
+            title="Save yFiles graph model to cloud database"
+          >
+            {saveStatus === 'saving' ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+            ) : saveStatus === 'saved' ? (
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
+            ) : (
+              <Save className="w-3.5 h-3.5 text-indigo-400" />
+            )}
+            <span>
+              {saveStatus === 'saving'
+                ? 'Saving...'
+                : saveStatus === 'saved'
+                ? 'Saved'
+                : saveStatus === 'error'
+                ? 'Save Failed'
+                : 'Save Model'}
+            </span>
+          </button>
+        )}
+
         {onExportToDrawio && (
           <button
             onClick={onExportToDrawio}

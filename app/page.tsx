@@ -64,22 +64,32 @@ const DrawioStudio = dynamic(
   }
 );
 
+import type { YFilesModelRecord } from '@/app/services/yfiles';
+
 type StudioMode = 'drawio' | 'yfiles';
 
 export default function Home() {
   const [mode, setMode] = useState<StudioMode>('drawio');
-
   const [exportedXml, setExportedXml] = useState<string | undefined>(undefined);
+  const [modelToLoad, setModelToLoad] = useState<YFilesModelRecord | null>(null);
 
   const handleExportToDrawio = (xml: string, _title?: string) => {
     setExportedXml(xml);
     setMode('drawio');
   };
 
+  const handleLoadYFilesModel = (model: YFilesModelRecord) => {
+    setModelToLoad(model);
+    setMode('yfiles');
+  };
+
   if (mode === 'yfiles') {
     return (
       <div className="flex flex-col w-screen h-screen overflow-hidden bg-zinc-950">
-        <DiagramEditor onExportToDrawio={handleExportToDrawio} />
+        <DiagramEditor
+          onExportToDrawio={handleExportToDrawio}
+          initialModelToLoad={modelToLoad}
+        />
       </div>
     );
   }
@@ -89,6 +99,7 @@ export default function Home() {
       onBack={() => setMode('yfiles')}
       initialXml={exportedXml}
       initialTab={exportedXml ? 'editor' : undefined}
+      onLoadYFilesModel={handleLoadYFilesModel}
     />
   );
 }

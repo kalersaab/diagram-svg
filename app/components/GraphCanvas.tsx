@@ -15,7 +15,7 @@ import { configureDiagramStyles, type DiagramNodeData } from '../utils/yfiles-st
 import { type ContextMenuState } from './ContextMenu';
 
 interface GraphCanvasProps {
-  onGraphComponentReady: (gc: GraphComponent) => void;
+  onGraphComponentReady: (gc: GraphComponent | null) => void;
   onSelectItem: (item: IModelItem | null) => void;
   onContextMenu: (state: ContextMenuState) => void;
   isGridVisible: boolean;
@@ -119,6 +119,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     onGraphComponentReadyRef.current(gc);
 
     return () => {
+      onGraphComponentReadyRef.current(null);
       if (graphComponentRef.current) {
         graphComponentRef.current.cleanUp();
         if (gc.htmlElement.parentNode) {

@@ -23,64 +23,98 @@ import { type DiagramNodeData } from '../utils/yfiles-styles';
 import { yFilesToDrawioXml } from '../utils/yfiles-to-drawio';
 import {
   type Metamodel,
-  DEFAULT_METAMODEL,
+  EMPTY_METAMODEL,
 } from '../utils/metamodel';
 import MetamodelService from '@/app/services/metamodel';
+import YFilesService, {
+  type YFilesModelRecord,
+  type YFilesModelCategory,
+} from '@/app/services/yfiles';
+import {
+  serializeGraphToYFilesModel,
+  loadYFilesModelIntoGraph,
+} from '../utils/yfiles-model-bridge';
+import { ModelsTableView } from './ModelsTableView';
+import { AuthModal } from './AuthModal';
 import { useAuth } from '@/app/hooks/useAuth';
 
 const metamodelService = new MetamodelService();
+const yfilesService = new YFilesService();
 
 interface DiagramEditorProps {
   onExportToDrawio?: (xml: string) => void;
+  onModelsChange?: (models: import('@/app/services/yfiles').YFilesModelRecord[], activeId?: string) => void;
+  initialModelToLoad?: YFilesModelRecord | null;
 }
 
-export default function DiagramEditor({ onExportToDrawio }: DiagramEditorProps) {
+export default function DiagramEditor({ onExportToDrawio, onModelsChange, initialModelToLoad }: DiagramEditorProps) {
   const auth = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [activeCenterView, setActiveCenterView] = useState<'canvas' | 'models'>('canvas');
   const [graphComponent, setGraphComponent] = useState<GraphComponent | null>(null);
-  const [diagramTitle, setDiagramTitle] = useState<string>('Cloud Microservices Architecture');
+  const graphComponentRef = useRef<GraphComponent | null>(null);
+  const pendingModelRef = useRef<YFilesModelRecord | null>(initialModelToLoad ?? null);
+  const [diagramTitle, setDiagramTitle] = useState<string>(initialModelToLoad?.title || 'Untitled Diagram');
   const [selectedItem, setSelectedItem] = useState<IModelItem | null>(null);
 
-  const [metamodel, setMetamodel] = useState<Metamodel>(DEFAULT_METAMODEL);
+  const [metamodel, setMetamodel] = useState<Metamodel>(EMPTY_METAMODEL);
 
   const [metamodelRemoteId, setMetamodelRemoteId] = useState<string | undefined>(undefined);
+  const [yfilesModelRemoteId, setYfilesModelRemoteId] = useState<string | undefined>(undefined);
+  const [savedModels, setSavedModels] = useState<YFilesModelRecord[]>([]);
 
   const syncDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   type SyncStatus = 'idle' | 'saving' | 'saved' | 'error' | 'unauthenticated';
   const [metamodelSyncStatus, setMetamodelSyncStatus] = useState<SyncStatus>('unauthenticated');
+  const [yfilesModelSyncStatus, setYfilesModelSyncStatus] = useState<SyncStatus>('idle');
 
   useEffect(() => {
     if (auth.status === 'unauthenticated') {
       setMetamodelSyncStatus('unauthenticated');
+      setSavedModels([]);
       return;
     }
     if (auth.status !== 'authenticated') return;
 
     setMetamodelSyncStatus('idle');
-    metamodelService.getMetamodels().then(res => {
-      const docs = res.data;
-      if (docs.length > 0) {
-        const latest = docs[0];
-        setMetamodelRemoteId(latest._id);
-        setMetamodel({
-          objectTypes: latest.objectTypes.map(ot => ({
-            ...(ot as unknown as import('../utils/metamodel').ObjectTypeDefinition),
-            id: ot._id,
-          })),
-          relationshipTypes: latest.relationshipTypes.map(rt => ({
-            ...rt,
-            id: rt._id,
-            // Flatten populated objects back to _id strings
-            allowedSourceTypes: rt.allowedSourceTypes.map((t) => t._id),
-            allowedTargetTypes: rt.allowedTargetTypes.map((t) => t._id),
-          })),
-        });
-        setMetamodelSyncStatus('saved');
-      }
-    }).catch(err => {
-      console.error('Failed to load metamodel from API', err);
-      setMetamodelSyncStatus('error');
-    });
+    metamodelService
+      .getMetamodels()
+      .then(res => {
+        const docs = res.data;
+        if (docs.length > 0) {
+          const latest = docs[0];
+          setMetamodelRemoteId(latest._id);
+          setMetamodel({
+            objectTypes: latest.objectTypes.map(ot => ({
+              ...(ot as unknown as import('../utils/metamodel').ObjectTypeDefinition),
+              id: ot._id,
+            })),
+            relationshipTypes: latest.relationshipTypes.map(rt => ({
+              ...rt,
+              id: rt._id,
+              allowedSourceTypes: rt.allowedSourceTypes.map(t => t._id),
+              allowedTargetTypes: rt.allowedTargetTypes.map(t => t._id),
+            })),
+          });
+          setMetamodelSyncStatus('saved');
+        }
+      })
+      .catch(err => {
+        console.error('Failed to load metamodel from API', err);
+        setMetamodelSyncStatus('error');
+      });
+
+    // Load saved yFiles models
+    yfilesService
+      .getYFilesModels()
+      .then(models => {
+        setSavedModels(models);
+        onModelsChange?.(models, yfilesModelRemoteId);
+      })
+      .catch(err => {
+        console.error('Failed to load yFiles models from API', err);
+      });
   }, [auth.status]);
 
   // ─── Manual save handler ───────────────────────────────────────────────────
@@ -95,7 +129,6 @@ export default function DiagramEditor({ onExportToDrawio }: DiagramEditorProps) 
         metamodelRemoteId,
       );
       if (!metamodelRemoteId) setMetamodelRemoteId(doc._id);
-      // Persist the backend _ids back into local state so subsequent saves use real refs
       setMetamodel(updated);
       setMetamodelSyncStatus('saved');
       setTimeout(() => setMetamodelSyncStatus('idle'), 2000);
@@ -104,6 +137,121 @@ export default function DiagramEditor({ onExportToDrawio }: DiagramEditorProps) 
       setMetamodelSyncStatus('error');
     }
   }, [auth.status, diagramTitle, metamodel, metamodelRemoteId]);
+
+  // ─── Manual save yFiles model handler ──────────────────────────────────────
+  const handleSaveYFilesModel = useCallback(
+    async (customTitle?: unknown, customCategory?: unknown) => {
+      if (!graphComponent) return;
+      if (auth.status !== 'authenticated') {
+        setShowAuthModal(true);
+        return;
+      }
+
+      const titleToSave =
+        typeof customTitle === 'string' && customTitle.trim()
+          ? customTitle.trim()
+          : diagramTitle || 'Untitled Diagram';
+
+      const categoryToSave: YFilesModelCategory =
+        typeof customCategory === 'string'
+          ? (customCategory as YFilesModelCategory)
+          : 'cloud';
+
+      setYfilesModelSyncStatus('saving');
+      try {
+        const payload = await serializeGraphToYFilesModel(graphComponent, {
+          title: titleToSave,
+          category: categoryToSave,
+          metamodelId: metamodelRemoteId,
+          includeSvg: true,
+          includeDrawioXml: true,
+        });
+
+        let doc: YFilesModelRecord;
+        if (yfilesModelRemoteId) {
+          doc = await yfilesService.updateYFilesModel(yfilesModelRemoteId, payload);
+          setSavedModels(prev => {
+            const next = prev.map(m => (m._id === doc._id ? doc : m));
+            onModelsChange?.(next, doc._id);
+            return next;
+          });
+        } else {
+          doc = await yfilesService.createYFilesModel(payload);
+          setYfilesModelRemoteId(doc._id);
+          setSavedModels(prev => {
+            const next = [doc, ...prev];
+            onModelsChange?.(next, doc._id);
+            return next;
+          });
+        }
+
+        if (typeof customTitle === 'string' && customTitle.trim() && customTitle.trim() !== diagramTitle) {
+          setDiagramTitle(customTitle.trim());
+        }
+
+        setYfilesModelSyncStatus('saved');
+        setTimeout(() => setYfilesModelSyncStatus('idle'), 2500);
+      } catch (err) {
+        console.error('Failed to save yFiles model', err);
+        setYfilesModelSyncStatus('error');
+        setTimeout(() => setYfilesModelSyncStatus('idle'), 3000);
+      }
+    },
+    [graphComponent, auth.status, diagramTitle, metamodelRemoteId, yfilesModelRemoteId],
+  );
+
+  const applyModelToGraph = useCallback((gc: GraphComponent, model: YFilesModelRecord) => {
+    pendingModelRef.current = model;
+    loadYFilesModelIntoGraph(gc, model.graphData);
+    setDiagramTitle(model.title);
+    setYfilesModelRemoteId(model._id);
+    setSelectedItem(null);
+    gc.fitGraphBounds();
+  }, []);
+
+  const handleLoadModel = useCallback(
+    async (model: YFilesModelRecord) => {
+      setActiveCenterView('canvas');
+      pendingModelRef.current = model;
+      const gc = graphComponentRef.current;
+      if (gc) {
+        applyModelToGraph(gc, model);
+      }
+
+      try {
+        const fullModel = await yfilesService.getYFilesModel(model._id);
+        pendingModelRef.current = fullModel;
+        const live = graphComponentRef.current;
+        if (live) {
+          applyModelToGraph(live, fullModel);
+        }
+      } catch (err) {
+        console.warn('Could not fetch full yFiles model; using list payload', err);
+      }
+    },
+    [applyModelToGraph],
+  );
+
+  const handleDeleteModel = useCallback(
+    async (id: string) => {
+      try {
+        await yfilesService.deleteYFilesModel(id);
+        setSavedModels(prev => {
+          const next = prev.filter(m => m._id !== id);
+          const newActive = yfilesModelRemoteId === id ? undefined : yfilesModelRemoteId;
+          onModelsChange?.(next, newActive);
+          return next;
+        });
+        if (yfilesModelRemoteId === id) {
+          setYfilesModelRemoteId(undefined);
+        }
+      } catch (err) {
+        console.error('Failed to delete yFiles model', err);
+        alert('Failed to delete model.');
+      }
+    },
+    [yfilesModelRemoteId, onModelsChange],
+  );
 
   // ─── Change handler — marks status dirty, triggers auto-save debounce ──────
 
@@ -152,13 +300,22 @@ export default function DiagramEditor({ onExportToDrawio }: DiagramEditorProps) 
     item: null
   });
 
-  const handleGraphComponentReady = useCallback((gc: GraphComponent) => {
+  const handleGraphComponentReady = useCallback((gc: GraphComponent | null) => {
+    graphComponentRef.current = gc;
     setGraphComponent(gc);
-    const initialTmpl = SAMPLE_TEMPLATES[0];
-    loadTemplateIntoGraph(gc.graph, initialTmpl);
-    void applyLayout(gc, initialTmpl.recommendedLayout, { duration: '0ms', animate: false });
-    gc.fitGraphBounds();
-  }, []);
+    if (gc && pendingModelRef.current) {
+      applyModelToGraph(gc, pendingModelRef.current);
+    }
+  }, [applyModelToGraph]);
+
+  useEffect(() => {
+    if (!initialModelToLoad) return;
+    pendingModelRef.current = initialModelToLoad;
+    const gc = graphComponentRef.current;
+    if (gc) {
+      applyModelToGraph(gc, initialModelToLoad);
+    }
+  }, [initialModelToLoad, applyModelToGraph]);
 
   const handleRunLayout = useCallback(
     async (layoutType: LayoutType) => {
@@ -185,6 +342,8 @@ export default function DiagramEditor({ onExportToDrawio }: DiagramEditorProps) 
       graphComponent.graph.clear();
       setSelectedItem(null);
       setDiagramTitle('Untitled Diagram');
+      setYfilesModelRemoteId(undefined);
+      pendingModelRef.current = null;
     }
   }, [graphComponent]);
 
@@ -227,7 +386,7 @@ export default function DiagramEditor({ onExportToDrawio }: DiagramEditorProps) 
 
   return (
     <div className="flex flex-col w-screen h-screen overflow-hidden bg-zinc-950 text-zinc-100 select-none">
-      {}
+      { }
       <Toolbar
         graphComponent={graphComponent}
         diagramTitle={diagramTitle}
@@ -237,6 +396,8 @@ export default function DiagramEditor({ onExportToDrawio }: DiagramEditorProps) 
         onClearGraph={handleClearGraph}
         onOpenExportModal={() => setIsExportModalOpen(true)}
         onExportToDrawio={onExportToDrawio ? handleExportToDrawio : undefined}
+        onSaveModel={handleSaveYFilesModel}
+        saveStatus={yfilesModelSyncStatus}
         isGridVisible={isGridVisible}
         onToggleGrid={() => setIsGridVisible(!isGridVisible)}
         isSnappingEnabled={isSnappingEnabled}
@@ -247,7 +408,16 @@ export default function DiagramEditor({ onExportToDrawio }: DiagramEditorProps) 
         onToggleLeftSidebar={() => setIsMetamodelDrawerOpen(o => !o)}
         isRightSidebarOpen={isRightSidebarOpen}
         onToggleRightSidebar={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
+        auth={auth}
+        onShowAuth={() => setShowAuthModal(true)}
       />
+
+      {showAuthModal && (
+        <AuthModal
+          auth={auth}
+          onClose={() => setShowAuthModal(false)}
+        />
+      )}
 
       {/* Metamodel drawer — overlays the canvas */}
       <MetamodelDrawer
@@ -260,11 +430,13 @@ export default function DiagramEditor({ onExportToDrawio }: DiagramEditorProps) 
         onSave={handleSaveMetamodel}
         syncStatus={metamodelSyncStatus}
         onAddNode={handleAddNodeFromPalette}
+        onOpenModelsView={() => setActiveCenterView('models')}
+        activeView={activeCenterView}
+        savedModelsCount={savedModels.length}
       />
 
-      {/* Main Studio Area */}
+      {/* Main Studio Area — keep GraphCanvas mounted so loading a model never hits a destroyed graph */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Center Canvas */}
         <main className="flex-1 h-full relative overflow-hidden">
           <GraphCanvas
             onGraphComponentReady={handleGraphComponentReady}
@@ -276,7 +448,7 @@ export default function DiagramEditor({ onExportToDrawio }: DiagramEditorProps) 
 
           <GraphOverview
             graphComponent={graphComponent}
-            isOpen={isMinimapOpen}
+            isOpen={isMinimapOpen && activeCenterView === 'canvas'}
             onToggle={() => setIsMinimapOpen(!isMinimapOpen)}
           />
 
@@ -287,10 +459,30 @@ export default function DiagramEditor({ onExportToDrawio }: DiagramEditorProps) 
             onSelectItem={setSelectedItem}
             onRunLayout={handleRunLayout}
           />
+
+          {activeCenterView === 'models' && (
+            <div className="absolute inset-0 z-30">
+              <ModelsTableView
+                models={savedModels}
+                activeModelId={yfilesModelRemoteId}
+                onLoadModel={model => {
+                  void handleLoadModel(model);
+                }}
+                onDeleteModel={handleDeleteModel}
+                onOpenInDrawio={onExportToDrawio}
+                onRefresh={() => {
+                  yfilesService.getYFilesModels().then(m => {
+                    setSavedModels(m);
+                    onModelsChange?.(m, yfilesModelRemoteId);
+                  }).catch(err => console.error(err));
+                }}
+                onNewModel={() => setActiveCenterView('canvas')}
+              />
+            </div>
+          )}
         </main>
 
-        {}
-        {isRightSidebarOpen && (
+        {isRightSidebarOpen && activeCenterView === 'canvas' && (
           <PropertiesPanel
             selectedItem={selectedItem}
             graphComponent={graphComponent}
@@ -301,7 +493,7 @@ export default function DiagramEditor({ onExportToDrawio }: DiagramEditorProps) 
         )}
       </div>
 
-      {}
+      { }
       <SvgExportModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}

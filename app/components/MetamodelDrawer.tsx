@@ -36,6 +36,9 @@ import {
   List,
   AlertCircle,
   Search,
+  Layers,
+  Sparkles,
+  FolderKanban,
 } from 'lucide-react';
 
 import type {
@@ -51,6 +54,7 @@ import {
   TYPE_COLOR_PALETTE,
 } from '../utils/metamodel';
 import type { DiagramNodeData } from '../utils/yfiles-styles';
+import type { YFilesModelRecord, YFilesModelCategory } from '../services/yfiles';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -74,6 +78,9 @@ interface MetamodelDrawerProps {
   onSave: () => Promise<void>;
   syncStatus: MetamodelSyncStatus;
   onAddNode: (data: DiagramNodeData) => void;
+  onOpenModelsView?: () => void;
+  activeView?: 'canvas' | 'models';
+  savedModelsCount?: number;
 }
 
 // ─── Shared constants ─────────────────────────────────────────────────────────
@@ -367,6 +374,9 @@ export function MetamodelDrawer({
   onSave,
   syncStatus,
   onAddNode,
+  onOpenModelsView,
+  activeView = 'canvas',
+  savedModelsCount = 0,
 }: MetamodelDrawerProps) {
   // Which sections are expanded
   const [expanded, setExpanded] = useState<Record<DrawerSection, boolean>>({
@@ -560,10 +570,34 @@ export function MetamodelDrawer({
             <Boxes className="w-3.5 h-3.5 text-white" />
           </div>
           <span className="text-sm font-bold text-white tracking-tight flex-1">
-            Metamodel Editor
+            Metamodel Schema
           </span>
 
           <SyncBadge />
+
+          {/* Models Option Button */}
+          {onOpenModelsView && (
+            <button
+              onClick={() => {
+                onOpenModelsView();
+                onClose();
+              }}
+              title="Open Models Table View"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold rounded-lg transition-all ${
+                activeView === 'models'
+                  ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/25'
+                  : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700/60'
+              }`}
+            >
+              <FolderKanban className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Models</span>
+              {savedModelsCount > 0 && (
+                <span className="ml-0.5 text-[9.5px] px-1.5 py-0.2 rounded-full font-bold bg-indigo-500/30 text-indigo-300">
+                  {savedModelsCount}
+                </span>
+              )}
+            </button>
+          )}
 
           {/* Save button */}
           <button
@@ -578,11 +612,13 @@ export function MetamodelDrawer({
                 : 'bg-indigo-500/15 border border-indigo-500/25 text-indigo-400 hover:bg-indigo-500/25'
             }`}
           >
-            {syncStatus === 'saving'
-              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              : syncStatus === 'saved'
-              ? <Cloud className="w-3.5 h-3.5" />
-              : <Save className="w-3.5 h-3.5" />}
+            {syncStatus === 'saving' ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : syncStatus === 'saved' ? (
+              <Cloud className="w-3.5 h-3.5" />
+            ) : (
+              <Save className="w-3.5 h-3.5" />
+            )}
             <span>Save</span>
           </button>
 
@@ -598,38 +634,80 @@ export function MetamodelDrawer({
 
         {/* ── Scrollable content ──────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto">
-
           {/* ════════════════════════════════════════════════════════════════
-              SECTION 1: METAMODEL
+              TOP SECTION: MODELS QUICK ACCESS
           ════════════════════════════════════════════════════════════════ */}
-          <SectionHeader
-            icon={<FileText className="w-4 h-4" />}
-            label="Metamodel"
-            open={expanded.metamodel}
-            onToggle={() => toggleSection('metamodel')}
-          />
-          {expanded.metamodel && (
-            <div className="px-4 py-4 space-y-3 border-b border-zinc-800/40">
-              <div>
-                <label className="block text-[11px] font-medium text-zinc-400 mb-1">Name</label>
-                <input
-                  value={metamodelName}
-                  onChange={e => onNameChange(e.target.value)}
-                  placeholder="e.g. E-Commerce Architecture"
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/30 transition-all"
-                />
-              </div>
-              <div className="flex items-center gap-3 text-[11px] text-zinc-500">
-                <span>{metamodel.objectTypes.length} object types</span>
-                <span>·</span>
-                <span>{metamodel.relationshipTypes.length} relationship types</span>
-                <span>·</span>
-                <span>
-                  {metamodel.objectTypes.reduce((acc, t) => acc + t.allowedAttributes.length, 0)} attributes
-                </span>
-              </div>
+          {onOpenModelsView && (
+            <div className="p-3 border-b border-zinc-800/80 bg-gradient-to-r from-indigo-950/40 via-zinc-900/60 to-zinc-900/40">
+              <button
+                onClick={() => {
+                  onOpenModelsView();
+                  onClose();
+                }}
+                className="w-full flex items-center justify-between p-3 rounded-xl bg-zinc-900/90 hover:bg-indigo-950/30 border border-indigo-500/25 hover:border-indigo-500/50 shadow-md shadow-indigo-500/5 transition-all text-left group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors shrink-0">
+                    <FolderKanban className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-zinc-100 group-hover:text-white">
+                        Diagram Models
+                      </span>
+                      {savedModelsCount > 0 && (
+                        <span className="text-[10px] px-2 py-0.2 rounded-full font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                          {savedModelsCount} saved
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10.5px] text-zinc-400">
+                      View all saved models in full table view
+                    </p>
+                  </div>
+                </div>
+                <div className="text-zinc-500 group-hover:text-indigo-400 transition-colors">
+                  <ChevronRight className="w-4 h-4" />
+                </div>
+              </button>
             </div>
           )}
+
+          {/* ════════════════════════════════════════════════════════════════
+              METAMODEL SCHEMA (Object Types, Attributes, Relationships)
+          ════════════════════════════════════════════════════════════════ */}
+          <div>
+              {/* ════════════════════════════════════════════════════════════════
+                  SECTION 1: METAMODEL
+              ════════════════════════════════════════════════════════════════ */}
+              <SectionHeader
+                icon={<FileText className="w-4 h-4" />}
+                label="Metamodel"
+                open={expanded.metamodel}
+                onToggle={() => toggleSection('metamodel')}
+              />
+              {expanded.metamodel && (
+                <div className="px-4 py-4 space-y-3 border-b border-zinc-800/40">
+                  <div>
+                    <label className="block text-[11px] font-medium text-zinc-400 mb-1">Name</label>
+                    <input
+                      value={metamodelName}
+                      onChange={e => onNameChange(e.target.value)}
+                      placeholder="e.g. E-Commerce Architecture"
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/30 transition-all"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3 text-[11px] text-zinc-500">
+                    <span>{metamodel.objectTypes.length} object types</span>
+                    <span>·</span>
+                    <span>{metamodel.relationshipTypes.length} relationship types</span>
+                    <span>·</span>
+                    <span>
+                      {metamodel.objectTypes.reduce((acc, t) => acc + t.allowedAttributes.length, 0)} attributes
+                    </span>
+                  </div>
+                </div>
+              )}
 
           {/* ════════════════════════════════════════════════════════════════
               SECTION 2: OBJECT TYPES
@@ -999,7 +1077,7 @@ export function MetamodelDrawer({
               ))}
             </div>
           )}
-
+          </div>
         </div>
         {/* end scrollable */}
       </aside>
