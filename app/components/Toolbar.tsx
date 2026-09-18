@@ -20,7 +20,7 @@ import {
   Edit2,
   ChevronDown,
   Layers,
-  PanelLeft,
+  Menu,
   PanelRight,
   MapPin,
   PenTool,
@@ -160,14 +160,14 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       <div className="flex items-center gap-3">
         <button
           onClick={onToggleLeftSidebar}
-          className={`p-1.5 rounded-lg border transition-colors ${
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${
             isLeftSidebarOpen
               ? 'bg-zinc-800 border-zinc-700 text-white'
               : 'border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
           }`}
-          title="Toggle Shape Palette"
+          title="Toggle Schema Editor"
         >
-          <PanelLeft className="w-4 h-4" />
+          <Menu className="w-4 h-4" />
         </button>
 
         <div className="flex items-center gap-2.5 pr-3 border-r border-zinc-800">

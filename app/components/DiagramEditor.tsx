@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   GraphComponent,
   type IModelItem,
@@ -35,6 +36,7 @@ import {
   loadYFilesModelIntoGraph,
 } from '../utils/yfiles-model-bridge';
 import { ModelsTableView } from './ModelsTableView';
+import { MetamodelScreen } from './MetamodelScreen';
 import { AuthModal } from './AuthModal';
 import { useAuth } from '@/app/hooks/useAuth';
 
@@ -49,8 +51,9 @@ interface DiagramEditorProps {
 
 export default function DiagramEditor({ onExportToDrawio, onModelsChange, initialModelToLoad }: DiagramEditorProps) {
   const auth = useAuth();
+  const router = useRouter();
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [activeCenterView, setActiveCenterView] = useState<'canvas' | 'models'>('canvas');
+  const [activeCenterView, setActiveCenterView] = useState<'canvas' | 'models' | 'metamodel'>('canvas');
   const [graphComponent, setGraphComponent] = useState<GraphComponent | null>(null);
   const graphComponentRef = useRef<GraphComponent | null>(null);
   const pendingModelRef = useRef<YFilesModelRecord | null>(initialModelToLoad ?? null);
@@ -105,7 +108,6 @@ export default function DiagramEditor({ onExportToDrawio, onModelsChange, initia
         setMetamodelSyncStatus('error');
       });
 
-    // Load saved yFiles models
     yfilesService
       .getYFilesModels()
       .then(models => {
@@ -117,14 +119,12 @@ export default function DiagramEditor({ onExportToDrawio, onModelsChange, initia
       });
   }, [auth.status]);
 
-  // ─── Manual save handler ───────────────────────────────────────────────────
-
   const handleSaveMetamodel = useCallback(async () => {
     if (auth.status !== 'authenticated') return;
     setMetamodelSyncStatus('saving');
     try {
       const { doc, metamodel: updated } = await metamodelService.syncMetamodel(
-        diagramTitle || 'My Metamodel',
+        diagramTitle || 'Metamodel',
         metamodel,
         metamodelRemoteId,
       );
@@ -138,7 +138,6 @@ export default function DiagramEditor({ onExportToDrawio, onModelsChange, initia
     }
   }, [auth.status, diagramTitle, metamodel, metamodelRemoteId]);
 
-  // ─── Manual save yFiles model handler ──────────────────────────────────────
   const handleSaveYFilesModel = useCallback(
     async (customTitle?: unknown, customCategory?: unknown) => {
       if (!graphComponent) return;
@@ -268,7 +267,7 @@ export default function DiagramEditor({ onExportToDrawio, onModelsChange, initia
       setMetamodelSyncStatus('saving');
       try {
         const { doc, metamodel: synced } = await metamodelService.syncMetamodel(
-          diagramTitle || 'My Metamodel',
+          diagramTitle || 'Metamodel',
           updated,
           metamodelRemoteId,
         );
@@ -284,7 +283,7 @@ export default function DiagramEditor({ onExportToDrawio, onModelsChange, initia
   }, [auth.status, diagramTitle, metamodelRemoteId]);
 
   const [isMetamodelDrawerOpen, setIsMetamodelDrawerOpen] = useState<boolean>(false);
-  const [metamodelName, setMetamodelName] = useState<string>('My Metamodel');
+  const [metamodelName, setMetamodelName] = useState<string>('Metamodel');
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState<boolean>(true);
   const [isMinimapOpen, setIsMinimapOpen] = useState<boolean>(true);
   const [isGridVisible, setIsGridVisible] = useState<boolean>(true);
@@ -419,7 +418,6 @@ export default function DiagramEditor({ onExportToDrawio, onModelsChange, initia
         />
       )}
 
-      {/* Metamodel drawer — overlays the canvas */}
       <MetamodelDrawer
         open={isMetamodelDrawerOpen}
         onClose={() => setIsMetamodelDrawerOpen(false)}
@@ -430,12 +428,12 @@ export default function DiagramEditor({ onExportToDrawio, onModelsChange, initia
         onSave={handleSaveMetamodel}
         syncStatus={metamodelSyncStatus}
         onAddNode={handleAddNodeFromPalette}
-        onOpenModelsView={() => setActiveCenterView('models')}
+        onOpenModelsView={() => router.push('/models')}
+        onOpenMetamodelView={() => router.push('/metamodel')}
         activeView={activeCenterView}
         savedModelsCount={savedModels.length}
       />
 
-      {/* Main Studio Area — keep GraphCanvas mounted so loading a model never hits a destroyed graph */}
       <div className="flex-1 flex overflow-hidden relative">
         <main className="flex-1 h-full relative overflow-hidden">
           <GraphCanvas

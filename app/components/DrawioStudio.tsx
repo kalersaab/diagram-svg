@@ -7,7 +7,9 @@ import {
   ArrowLeft,
   Sparkles,
   Loader2,
+  Database,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { DrawioEmbed } from './DrawioEmbed';
 import { ModelsTableView } from './ModelsTableView';
 import { DrawioGallery } from './DrawioGallery';
@@ -26,7 +28,7 @@ import { useAuth } from '@/app/hooks/useAuth';
 
 const diagramService = new DiagramService();
 const yfilesService = new YFilesService();
-export type DrawioStudioTab = 'editor' | 'models' | 'gallery' | 'split';
+export type DrawioStudioTab = 'editor' | 'gallery' | 'split';
 
 interface DrawioStudioProps {
   className?: string;
@@ -34,10 +36,12 @@ interface DrawioStudioProps {
   initialXml?: string;
   initialTab?: DrawioStudioTab;
   onLoadYFilesModel?: (model: YFilesModelRecord) => void;
+  onOpenMetamodels?: () => void;
 }
 
-export function DrawioStudio({ className = '', onBack, initialXml, initialTab, onLoadYFilesModel }: DrawioStudioProps) {
+export function DrawioStudio({ className = '', onBack, initialXml, initialTab, onLoadYFilesModel, onOpenMetamodels }: DrawioStudioProps) {
   const auth = useAuth();
+  const router = useRouter();
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   const [activeTab, setActiveTab] = useState<DrawioStudioTab>(initialTab ?? 'gallery');
@@ -241,7 +245,6 @@ export function DrawioStudio({ className = '', onBack, initialXml, initialTab, o
   const tabs: { id: DrawioStudioTab; label: string; icon: React.ReactNode }[] = [
     { id: 'gallery', label: 'Gallery', icon: <LayoutGrid className="w-3.5 h-3.5" /> },
     { id: 'editor', label: 'Draw.io Editor', icon: <PenTool className="w-3.5 h-3.5" /> },
-    { id: 'models', label: 'Diagram Models', icon: <FolderKanban className="w-3.5 h-3.5" /> },
     { id: 'split', label: 'Split View', icon: <Columns className="w-3.5 h-3.5" /> },
   ];
 
@@ -292,16 +295,11 @@ export function DrawioStudio({ className = '', onBack, initialXml, initialTab, o
             >
               {tab.icon}
               <span>{tab.label}</span>
-              {tab.id === 'models' && savedYFilesModels.length > 0 && (
-                <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-indigo-500/20 text-indigo-300">
-                  {savedYFilesModels.length}
-                </span>
-              )}
             </button>
           ))}
         </div>
 
-        {activeDiagram && activeTab !== 'gallery' && activeTab !== 'models' && (
+        {activeDiagram && activeTab !== 'gallery' && (
           <>
             <div className="h-5 w-px bg-zinc-800 mx-1" />
             <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-zinc-800/50 border border-zinc-700/50">
@@ -314,11 +312,23 @@ export function DrawioStudio({ className = '', onBack, initialXml, initialTab, o
         )}
 
         {(loadingDiagrams || loadingYFilesModels) && (
-          <div className="ml-auto flex items-center gap-1.5 text-[11px] text-zinc-500">
+          <div className="flex items-center gap-1.5 text-[11px] text-zinc-500">
             <Loader2 className="w-3 h-3 animate-spin" />
             <span>Loading…</span>
           </div>
         )}
+
+        <div className="ml-auto flex items-center gap-1">
+          {onOpenMetamodels && (
+            <button
+              onClick={onOpenMetamodels}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800"
+            >
+              <Database className="w-3.5 h-3.5 text-violet-400" />
+              <span>Metamodels</span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-hidden">
@@ -341,24 +351,6 @@ export function DrawioStudio({ className = '', onBack, initialXml, initialTab, o
             onSave={handleSave}
             onViewSvg={handleViewSvg}
             autoExportSvg
-          />
-        )}
-
-        {activeTab === 'models' && (
-          <ModelsTableView
-            models={savedYFilesModels}
-            onLoadModel={(model) => {
-              if (onLoadYFilesModel) {
-                onLoadYFilesModel(model);
-              } else if (onBack) {
-                onBack();
-              }
-            }}
-            onDeleteModel={handleDeleteYFilesModel}
-            onOpenInDrawio={handleOpenXmlInDrawio}
-            onRefresh={fetchYFilesModels}
-            onNewModel={onBack}
-            isLoading={loadingYFilesModels}
           />
         )}
 
